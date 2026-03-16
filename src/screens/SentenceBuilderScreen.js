@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   SafeAreaView,
   StyleSheet,
@@ -7,22 +7,42 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
-  Alert,
+  Animated,
   ActivityIndicator,
 } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { useTTS } from '../contexts/TTSContext';
+import { BackArrowIcon, PlayIcon } from '../components/icons/ConditionIcons';
+import { learningContent, ANIMAL_SOUNDS, categories } from '../data/visualLearningDataLocal';
 
-const SentenceBuilderScreen = ({ onBack }) => {
+// Emoji fallbacks if images don't load
+const EMOJI_FALLBACKS = {
+  cat: '🐱', dog: '🐕', cow: '🐄', lion: '🦁', elephant: '🐘', horse: '🐴', sheep: '🐑', pig: '🐷',
+  bird: '🐦', duck: '🦆', parrot: '🦜', rooster: '🐓', owl: '🦉', crow: '🐦‍⬛',
+  apple: '🍎', car: '🚗', book: '📚', chair: '🪑', phone: '📱', watch: '⌚', shoes: '👟', ball: '⚽',
+  morning: '🌅', afternoon: '☀️', evening: '🌆', night: '🌙', noon: '🌞', sunrise: '🌄', sunset: '🌇',
+};
+
+const VisualLearningScreen = ({ onBack }) => {
   const { currentTheme, currentTextSize, currentSpacing } = useTheme();
+  const { t } = useLanguage();
   const { speak } = useTTS();
+  
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const [currentLevel, setCurrentLevel] = useState(0);
-  const [userSentence, setUserSentence] = useState([]);
-  const [isCorrect, setIsCorrect] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [selectedWord, setSelectedWord] = useState(null);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
+  
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const successAnim = useRef(new Animated.Value(0)).current;
+  const imageLoadTimeoutRef = useRef(null);
   const [shuffledOptions, setShuffledOptions] = useState([]);
 
-  // Function to shuffle array
+  // Shuffle array function
   const shuffleArray = (array) => {
     const shuffled = [...array];
     for (let i = shuffled.length - 1; i > 0; i--) {
@@ -32,297 +52,140 @@ const SentenceBuilderScreen = ({ onBack }) => {
     return shuffled;
   };
 
-  const levels = [
-    // Levels 1-8: Single Words (Very Easy)
-    {
-      id: 1,
-      image: '🐱',
-      description: 'Find the word for this animal',
-      correctSentence: ['cat'],
-      wordOptions: ['cat', 'dog', 'bird', 'fish'],
-      levelType: 'word',
-    },
-    {
-      id: 2,
-      image: '🍎',
-      description: 'Find the word for this fruit',
-      correctSentence: ['apple'],
-      wordOptions: ['apple', 'banana', 'orange', 'grape'],
-      levelType: 'word',
-    },
-    {
-      id: 3,
-      image: '🚗',
-      description: 'Find the word for this vehicle',
-      correctSentence: ['car'],
-      wordOptions: ['car', 'bus', 'truck', 'bike'],
-      levelType: 'word',
-    },
-    {
-      id: 4,
-      image: '🏠',
-      description: 'Find the word for this place',
-      correctSentence: ['house'],
-      wordOptions: ['house', 'school', 'park', 'store'],
-      levelType: 'word',
-    },
-    {
-      id: 5,
-      image: '👦',
-      description: 'Find the word for this person',
-      correctSentence: ['boy'],
-      wordOptions: ['boy', 'girl', 'man', 'woman'],
-      levelType: 'word',
-    },
-    {
-      id: 6,
-      image: '🌳',
-      description: 'Find the word for this plant',
-      correctSentence: ['tree'],
-      wordOptions: ['tree', 'flower', 'grass', 'bush'],
-      levelType: 'word',
-    },
-    {
-      id: 7,
-      image: '☀️',
-      description: 'Find the word for this weather',
-      correctSentence: ['sun'],
-      wordOptions: ['sun', 'rain', 'cloud', 'snow'],
-      levelType: 'word',
-    },
-    {
-      id: 8,
-      image: '📚',
-      description: 'Find the word for this object',
-      correctSentence: ['book'],
-      wordOptions: ['book', 'pen', 'paper', 'pencil'],
-      levelType: 'word',
-    },
-
-    // Levels 9-14: Two Words (Easy)
-    {
-      id: 9,
-      image: '🐱🏠',
-      description: 'A cat in a house',
-      correctSentence: ['cat', 'house'],
-      wordOptions: ['cat', 'house', 'dog', 'car', 'tree'],
-      levelType: 'two-words',
-    },
-    {
-      id: 10,
-      image: '👦🍎',
-      description: 'A boy with an apple',
-      correctSentence: ['boy', 'apple'],
-      wordOptions: ['boy', 'apple', 'girl', 'banana', 'orange'],
-      levelType: 'two-words',
-    },
-    {
-      id: 11,
-      image: '🚗🌳',
-      description: 'A car near a tree',
-      correctSentence: ['car', 'tree'],
-      wordOptions: ['car', 'tree', 'bus', 'flower', 'house'],
-      levelType: 'two-words',
-    },
-    {
-      id: 12,
-      image: '👩📚',
-      description: 'A woman with a book',
-      correctSentence: ['woman', 'book'],
-      wordOptions: ['woman', 'book', 'man', 'pen', 'paper'],
-      levelType: 'two-words',
-    },
-    {
-      id: 13,
-      image: '🐕☀️',
-      description: 'A dog in the sun',
-      correctSentence: ['dog', 'sun'],
-      wordOptions: ['dog', 'sun', 'cat', 'rain', 'cloud'],
-      levelType: 'two-words',
-    },
-    {
-      id: 14,
-      image: '🏠🌳',
-      description: 'A house with trees',
-      correctSentence: ['house', 'trees'],
-      wordOptions: ['house', 'trees', 'school', 'flowers', 'grass'],
-      levelType: 'two-words',
-    },
-
-    // Levels 15-18: Three Words (Medium)
-    {
-      id: 15,
-      image: '👦🍎🏠',
-      description: 'A boy eating an apple at home',
-      correctSentence: ['boy', 'eats', 'apple'],
-      wordOptions: ['boy', 'eats', 'apple', 'girl', 'drinks', 'banana', 'house'],
-      levelType: 'three-words',
-    },
-    {
-      id: 16,
-      image: '🐕🏃🌳',
-      description: 'A dog running near trees',
-      correctSentence: ['dog', 'runs', 'fast'],
-      wordOptions: ['dog', 'runs', 'fast', 'cat', 'walks', 'slow', 'tree'],
-      levelType: 'three-words',
-    },
-    {
-      id: 17,
-      image: '👩📚☀️',
-      description: 'A woman reading a book outside',
-      correctSentence: ['woman', 'reads', 'book'],
-      wordOptions: ['woman', 'reads', 'book', 'man', 'writes', 'letter', 'sun'],
-      levelType: 'three-words',
-    },
-    {
-      id: 18,
-      image: '🚗🏠🌳',
-      description: 'A car parked near a house with trees',
-      correctSentence: ['car', 'near', 'house'],
-      wordOptions: ['car', 'near', 'house', 'bus', 'far', 'school', 'tree'],
-      levelType: 'three-words',
-    },
-
-    // Levels 19-24: Full Sentences (Harder)
-    {
-      id: 19,
-      image: '👦🍎',
-      description: 'A boy eating an apple',
-      correctSentence: ['The', 'boy', 'eats', 'an', 'apple'],
-      wordOptions: ['The', 'boy', 'eats', 'an', 'apple', 'girl', 'drinks', 'a', 'banana'],
-      levelType: 'sentence',
-    },
-    {
-      id: 20,
-      image: '🐕🏃',
-      description: 'A dog running in the park',
-      correctSentence: ['The', 'dog', 'runs', 'in', 'the', 'park'],
-      wordOptions: ['The', 'dog', 'runs', 'in', 'the', 'park', 'cat', 'walks', 'near', 'house'],
-      levelType: 'sentence',
-    },
-    {
-      id: 21,
-      image: '👩📚',
-      description: 'A woman reading a book',
-      correctSentence: ['The', 'woman', 'reads', 'a', 'book'],
-      wordOptions: ['The', 'woman', 'reads', 'a', 'book', 'man', 'writes', 'an', 'letter'],
-      levelType: 'sentence',
-    },
-    {
-      id: 22,
-      image: '🚗🏠',
-      description: 'A car parked near a house',
-      correctSentence: ['The', 'car', 'is', 'near', 'the', 'house'],
-      wordOptions: ['The', 'car', 'is', 'near', 'the', 'house', 'bus', 'far', 'from', 'school'],
-      levelType: 'sentence',
-    },
-    {
-      id: 23,
-      image: '🐱☀️',
-      description: 'A cat sleeping in the sun',
-      correctSentence: ['The', 'cat', 'sleeps', 'in', 'the', 'sun'],
-      wordOptions: ['The', 'cat', 'sleeps', 'in', 'the', 'sun', 'dog', 'plays', 'under', 'tree'],
-      levelType: 'sentence',
-    },
-    {
-      id: 24,
-      image: '👦🌳📚',
-      description: 'A boy reading a book under a tree',
-      correctSentence: ['The', 'boy', 'reads', 'a', 'book', 'under', 'the', 'tree'],
-      wordOptions: ['The', 'boy', 'reads', 'a', 'book', 'under', 'the', 'tree', 'girl', 'writes', 'near', 'house'],
-      levelType: 'sentence',
-    },
-  ];
-
-  const currentLevelData = levels[currentLevel];
-
-  // Shuffle word options when level changes
   useEffect(() => {
-    if (currentLevelData && currentLevelData.wordOptions) {
-      setShuffledOptions(shuffleArray(currentLevelData.wordOptions));
-    }
-  }, [currentLevel]);
+    return () => {
+      if (imageLoadTimeoutRef.current) {
+        clearTimeout(imageLoadTimeoutRef.current);
+      }
+    };
+  }, []);
 
-  const handleWordPress = (word) => {
-    if (userSentence.includes(word)) {
-      // Remove word if already selected
-      setUserSentence(userSentence.filter((w, index) => 
-        userSentence.indexOf(w) !== userSentence.lastIndexOf(w) || w !== word
-      ));
-    } else {
-      // Add word
-      setUserSentence([...userSentence, word]);
+  useEffect(() => {
+    if (selectedCategory) {
+      // Shuffle options when level changes
+      const currentContent = learningContent[selectedCategory][currentLevel];
+      setShuffledOptions(shuffleArray(currentContent.options));
+      if (imageLoadTimeoutRef.current) {
+        clearTimeout(imageLoadTimeoutRef.current);
+      }
+      setImageLoading(true);
+      setImageError(false);
+      imageLoadTimeoutRef.current = setTimeout(() => {
+        setImageLoading(false);
+      }, 2000);
+      
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.spring(scaleAnim, { toValue: 1, tension: 50, friction: 7, useNativeDriver: true }),
+      ]).start();
     }
-    setIsCorrect(null);
+  }, [selectedCategory, currentLevel]);
+
+  const handleCategorySelect = (categoryId) => {
+    if (imageLoadTimeoutRef.current) {
+      clearTimeout(imageLoadTimeoutRef.current);
+    }
+    setSelectedCategory(categoryId);
+    setCurrentLevel(0);
+    setSelectedWord(null);
+    setShowFeedback(false);
+    fadeAnim.setValue(0);
+    scaleAnim.setValue(0.9);
   };
 
-  const checkSentence = () => {
-    const userSentenceStr = userSentence.join(' ');
-    const correctSentenceStr = currentLevelData.correctSentence.join(' ');
+  const handleWordSelect = (word) => {
+    const currentContent = learningContent[selectedCategory][currentLevel];
     
-    if (userSentenceStr === correctSentenceStr) {
-      setIsCorrect(true);
-      const successMessage = 
-        currentLevelData.levelType === 'word' ? 'Great! You found the right word!' :
-        currentLevelData.levelType === 'two-words' ? 'Perfect! You matched the words!' :
-        currentLevelData.levelType === 'three-words' ? 'Excellent! You built the phrase!' :
-        'Excellent! You built the sentence correctly!';
-      speak(successMessage);
-      setTimeout(() => {
-        nextLevel();
-      }, 2000);
+    if (selectedCategory === 'sentences') {
+      if (selectedWord && selectedWord.length >= currentContent.maxWords) return;
+      const newSentence = selectedWord ? [...selectedWord, word] : [word];
+      setSelectedWord(newSentence);
+      speak(word);
+      if (newSentence.length === currentContent.correctAnswer.length) {
+        checkSentenceAnswer(newSentence);
+      }
     } else {
-      setIsCorrect(false);
-      speak('Not quite right. Try again!');
+      setSelectedWord(word);
+      speak(word);
+      setTimeout(() => checkAnswer(word), 500);
+    }
+  };
+
+  const checkAnswer = (word) => {
+    const currentContent = learningContent[selectedCategory][currentLevel];
+    if (word === currentContent.correctAnswer) {
+      setShowFeedback(true);
+      speak('Correct!');
+      Animated.sequence([
+        Animated.timing(successAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(successAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+      ]).start();
+      setTimeout(() => nextLevel(), 1500);
+    }
+  };
+
+  const checkSentenceAnswer = (sentence) => {
+    const currentContent = learningContent[selectedCategory][currentLevel];
+    if (JSON.stringify(sentence) === JSON.stringify(currentContent.correctAnswer)) {
+      setShowFeedback(true);
+      speak('Correct! ' + sentence.join(' '));
+      Animated.sequence([
+        Animated.timing(successAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(successAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+      ]).start();
+      setTimeout(() => nextLevel(), 2000);
     }
   };
 
   const nextLevel = () => {
-    if (currentLevel < levels.length - 1) {
+    const maxLevels = learningContent[selectedCategory].length;
+    if (currentLevel < maxLevels - 1) {
       setCurrentLevel(currentLevel + 1);
-      setUserSentence([]);
-      setIsCorrect(null);
-      // Shuffle options for the new level
-      const nextLevelData = levels[currentLevel + 1];
-      if (nextLevelData && nextLevelData.wordOptions) {
-        setShuffledOptions(shuffleArray(nextLevelData.wordOptions));
-      }
+      setSelectedWord(null);
+      setShowFeedback(false);
+      fadeAnim.setValue(0);
+      scaleAnim.setValue(0.9);
     } else {
-      Alert.alert('Congratulations!', 'You completed all levels!', [
-        { text: 'Play Again', onPress: () => {
-          setCurrentLevel(0);
-          setUserSentence([]);
-          setIsCorrect(null);
-          // Shuffle options for level 1
-          const firstLevelData = levels[0];
-          if (firstLevelData && firstLevelData.wordOptions) {
-            setShuffledOptions(shuffleArray(firstLevelData.wordOptions));
-          }
-        }},
-        { text: 'OK' }
-      ]);
+      speak('Congratulations! You completed all levels!');
+      setTimeout(() => {
+        if (imageLoadTimeoutRef.current) {
+          clearTimeout(imageLoadTimeoutRef.current);
+        }
+        setSelectedCategory(null);
+        setCurrentLevel(0);
+      }, 2000);
     }
   };
 
-  const resetLevel = () => {
-    setUserSentence([]);
-    setIsCorrect(null);
-    // Reshuffle options for current level
-    if (currentLevelData && currentLevelData.wordOptions) {
-      setShuffledOptions(shuffleArray(currentLevelData.wordOptions));
+  const speakAnswer = () => {
+    const currentContent = learningContent[selectedCategory][currentLevel];
+    if (selectedCategory === 'sentences') {
+      speak(currentContent.correctAnswer.join(' '));
+    } else {
+      speak(currentContent.correctAnswer);
+    }
+  };
+
+  const playAnimalSound = () => {
+    const currentContent = learningContent[selectedCategory][currentLevel];
+    const sound = ANIMAL_SOUNDS[currentContent.correctAnswer];
+    if (sound) speak(sound);
+  };
+
+  const removeLastWord = () => {
+    if (selectedWord && Array.isArray(selectedWord) && selectedWord.length > 0) {
+      const newSentence = selectedWord.slice(0, -1);
+      setSelectedWord(newSentence.length > 0 ? newSentence : null);
     }
   };
 
   const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: currentTheme.colors.background,
-    },
+    container: { flex: 1, backgroundColor: currentTheme.colors.background },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
+      padding: 15 * currentSpacing.scale,
       backgroundColor: currentTheme.colors.surface,
-      padding: 16 * currentSpacing.scale,
       borderBottomWidth: 1,
       borderBottomColor: currentTheme.colors.border,
     },
@@ -335,213 +198,324 @@ const SentenceBuilderScreen = ({ onBack }) => {
       alignItems: 'center',
       marginRight: 16 * currentSpacing.scale,
     },
-    backIcon: {
-      fontSize: 24 * currentTextSize.scale,
-      color: currentTheme.colors.surface,
-    },
     headerTitle: {
-      fontSize: 20 * currentTextSize.scale,
-      fontWeight: '600',
+      fontSize: 24 * currentTextSize.scale,
+      fontWeight: '700',
       color: currentTheme.colors.text,
       flex: 1,
     },
-    content: {
-      flex: 1,
-      padding: 20 * currentSpacing.scale,
-    },
-    levelIndicator: {
+    categoryGrid: { padding: 20 * currentSpacing.scale, gap: 16 * currentSpacing.scale },
+    categoryCard: {
       backgroundColor: currentTheme.colors.surface,
-      padding: 12 * currentSpacing.scale,
-      borderRadius: 12 * currentSpacing.scale,
-      marginBottom: 20 * currentSpacing.scale,
-      alignItems: 'center',
-    },
-    levelText: {
-      fontSize: 16 * currentTextSize.scale,
-      color: currentTheme.colors.textSecondary,
-    },
-    levelTypeText: {
-      fontSize: 14 * currentTextSize.scale,
-      color: currentTheme.colors.primary,
-      fontWeight: '600',
-      marginTop: 4 * currentSpacing.scale,
-    },
-    imageContainer: {
-      backgroundColor: currentTheme.colors.surface,
-      borderRadius: 16 * currentSpacing.scale,
+      borderRadius: 20 * currentSpacing.scale,
       padding: 24 * currentSpacing.scale,
-      marginBottom: 20 * currentSpacing.scale,
       alignItems: 'center',
-      borderWidth: 1,
-      borderColor: currentTheme.colors.border,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+      elevation: 8,
     },
-    imageEmoji: {
-      fontSize: 80 * currentTextSize.scale,
-      marginBottom: 16 * currentSpacing.scale,
-    },
-    imageDescription: {
-      fontSize: 18 * currentTextSize.scale,
-      color: currentTheme.colors.text,
-      textAlign: 'center',
-      fontWeight: '500',
-    },
-    sentenceContainer: {
-      backgroundColor: currentTheme.colors.surface,
-      borderRadius: 12 * currentSpacing.scale,
-      padding: 16 * currentSpacing.scale,
-      marginBottom: 20 * currentSpacing.scale,
-      minHeight: 60 * currentSpacing.scale,
-      borderWidth: 2,
-      borderColor: isCorrect === true ? '#4CAF50' : isCorrect === false ? '#F44336' : currentTheme.colors.border,
-    },
-    sentenceText: {
+    categoryIcon: { fontSize: 60 * currentTextSize.scale, marginBottom: 12 * currentSpacing.scale },
+    categoryName: {
       fontSize: 20 * currentTextSize.scale,
+      fontWeight: '700',
       color: currentTheme.colors.text,
-      textAlign: 'center',
-      minHeight: 30 * currentTextSize.scale,
     },
-    wordOptionsContainer: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'center',
-      marginBottom: 20 * currentSpacing.scale,
-    },
-    wordButton: {
+    content: { flex: 1, padding: 20 * currentSpacing.scale },
+    levelBadge: {
       backgroundColor: currentTheme.colors.primary,
       paddingHorizontal: 16 * currentSpacing.scale,
-      paddingVertical: 12 * currentSpacing.scale,
-      borderRadius: 25 * currentSpacing.scale,
-      margin: 4 * currentSpacing.scale,
-    },
-    wordButtonSelected: {
-      backgroundColor: currentTheme.colors.textSecondary,
-    },
-    wordButtonText: {
-      color: currentTheme.colors.surface,
-      fontSize: 16 * currentTextSize.scale,
-      fontWeight: '500',
-    },
-    buttonContainer: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
+      paddingVertical: 8 * currentSpacing.scale,
+      borderRadius: 20 * currentSpacing.scale,
+      alignSelf: 'center',
       marginBottom: 20 * currentSpacing.scale,
     },
-    actionButton: {
-      backgroundColor: currentTheme.colors.primary,
-      paddingHorizontal: 24 * currentSpacing.scale,
-      paddingVertical: 12 * currentSpacing.scale,
-      borderRadius: 25 * currentSpacing.scale,
-      flex: 0.45,
+    levelText: { color: '#FFFFFF', fontSize: 16 * currentTextSize.scale, fontWeight: '600' },
+    imageContainer: {
+      width: '100%',
+      height: 320 * currentSpacing.scale,
+      backgroundColor: currentTheme.colors.surface,
+      borderRadius: 24 * currentSpacing.scale,
+      overflow: 'hidden',
+      marginBottom: 20 * currentSpacing.scale,
+      borderWidth: 4,
+      borderColor: showFeedback ? '#10B981' : currentTheme.colors.primary,
+    },
+    image: { width: '100%', height: '100%', resizeMode: 'cover' },
+    emojiContainer: {
+      width: '100%',
+      height: '100%',
+      justifyContent: 'center',
       alignItems: 'center',
+      backgroundColor: currentTheme.colors.surface,
     },
-    resetButton: {
-      backgroundColor: currentTheme.colors.textSecondary,
+    emojiText: {
+      fontSize: 180 * currentTextSize.scale,
+      textAlign: 'center',
     },
-    actionButtonText: {
-      color: currentTheme.colors.surface,
+    imageLoadingContainer: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: currentTheme.colors.surface,
+      zIndex: 1,
+    },
+    actionButtonsRow: {
+      flexDirection: 'row',
+      gap: 12 * currentSpacing.scale,
+      marginBottom: 20 * currentSpacing.scale,
+    },
+    speakButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: currentTheme.colors.primary,
+      paddingVertical: 14 * currentSpacing.scale,
+      borderRadius: 16 * currentSpacing.scale,
+    },
+    animalSoundButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#10B981',
+      paddingVertical: 14 * currentSpacing.scale,
+      borderRadius: 16 * currentSpacing.scale,
+    },
+    buttonText: {
+      color: '#FFFFFF',
       fontSize: 16 * currentTextSize.scale,
       fontWeight: '600',
+      marginLeft: 8 * currentSpacing.scale,
     },
-    feedbackContainer: {
+    sentenceArea: {
+      backgroundColor: currentTheme.colors.surface,
+      borderRadius: 20 * currentSpacing.scale,
+      padding: 20 * currentSpacing.scale,
+      minHeight: 80 * currentSpacing.scale,
+      marginBottom: 20 * currentSpacing.scale,
+      borderWidth: 2,
+      borderColor: showFeedback ? '#10B981' : currentTheme.colors.border,
+    },
+    sentenceWords: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 * currentSpacing.scale },
+    wordChip: {
+      backgroundColor: currentTheme.colors.primary,
+      paddingHorizontal: 20 * currentSpacing.scale,
+      paddingVertical: 12 * currentSpacing.scale,
+      borderRadius: 16 * currentSpacing.scale,
+    },
+    wordChipText: { color: '#FFFFFF', fontSize: 18 * currentTextSize.scale, fontWeight: '600' },
+    removeButton: {
+      backgroundColor: '#EF4444',
+      paddingVertical: 14 * currentSpacing.scale,
+      borderRadius: 16 * currentSpacing.scale,
       alignItems: 'center',
-      marginTop: 20 * currentSpacing.scale,
+      marginBottom: 20 * currentSpacing.scale,
     },
-    feedbackText: {
+    wordOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 * currentSpacing.scale },
+    wordOption: {
+      backgroundColor: currentTheme.colors.surface,
+      paddingHorizontal: 24 * currentSpacing.scale,
+      paddingVertical: 16 * currentSpacing.scale,
+      borderRadius: 16 * currentSpacing.scale,
+      borderWidth: 2,
+      borderColor: currentTheme.colors.border,
+    },
+    wordOptionText: {
+      color: currentTheme.colors.text,
       fontSize: 18 * currentTextSize.scale,
       fontWeight: '600',
-      color: isCorrect === true ? '#4CAF50' : '#F44336',
     },
+    successOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(16, 185, 129, 0.9)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRadius: 24 * currentSpacing.scale,
+    },
+    successText: { fontSize: 48 * currentTextSize.scale, fontWeight: '700', color: '#FFFFFF' },
   });
+  const currentContent = selectedCategory ? learningContent[selectedCategory][currentLevel] : null;
+
+  const imageSource = useMemo(() => {
+    if (!currentContent) return undefined;
+    if (currentContent.image) {
+      const resolved = Image.resolveAssetSource(currentContent.image);
+      if (resolved?.uri) {
+        return { uri: resolved.uri };
+      }
+      return currentContent.image;
+    }
+    if (currentContent.imageUri) {
+      return { uri: currentContent.imageUri };
+    }
+    return undefined;
+  }, [currentContent]);
+
+  const isSentenceMode = selectedCategory === 'sentences';
+  const hasAnimalSound = currentContent?.hasSound && (selectedCategory === 'animals' || selectedCategory === 'birds');
+
+  if (!selectedCategory) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          {onBack && (
+            <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.7}>
+              <BackArrowIcon size={24 * currentTextSize.scale} color={currentTheme.colors.surface} />
+            </TouchableOpacity>
+          )}
+          <Text style={styles.headerTitle}>{t('visualLearningTitle')}</Text>
+        </View>
+        <ScrollView contentContainerStyle={styles.categoryGrid}>
+          {categories.map((category) => (
+            <TouchableOpacity
+              key={category.id}
+              style={[styles.categoryCard, { backgroundColor: category.bgColor }]}
+              onPress={() => handleCategorySelect(category.id)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.categoryIcon}>{category.icon}</Text>
+              <Text style={styles.categoryName}>{t(`visualLearningCategories.${category.id}`)}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (!currentContent) {
+    return null;
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        {onBack && (
-          <TouchableOpacity style={styles.backButton} onPress={onBack}>
-            <Text style={styles.backIcon}>←</Text>
-          </TouchableOpacity>
-        )}
-        <Text style={styles.headerTitle}>Learn to Build</Text>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => {
+            if (imageLoadTimeoutRef.current) {
+              clearTimeout(imageLoadTimeoutRef.current);
+            }
+            setSelectedCategory(null);
+            setCurrentLevel(0);
+            setSelectedWord(null);
+          }}
+          activeOpacity={0.7}
+        >
+          <BackArrowIcon size={24 * currentTextSize.scale} color={currentTheme.colors.surface} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{t(`visualLearningCategories.${selectedCategory}`)}</Text>
       </View>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.levelIndicator}>
-          <Text style={styles.levelText}>Level {currentLevel + 1} of {levels.length}</Text>
-          <Text style={styles.levelTypeText}>
-            {currentLevelData.levelType === 'word' && '🎯 Single Word'}
-            {currentLevelData.levelType === 'two-words' && '🔗 Two Words'}
-            {currentLevelData.levelType === 'three-words' && '📝 Three Words'}
-            {currentLevelData.levelType === 'sentence' && '📖 Full Sentence'}
-          </Text>
+      <ScrollView style={styles.content}>
+        <View style={styles.levelBadge}>
+          <Text style={styles.levelText}>Level {currentLevel + 1}/{learningContent[selectedCategory].length}</Text>
         </View>
-
-        <View style={styles.imageContainer}>
-          <Text style={styles.imageEmoji}>{currentLevelData.image}</Text>
-          <Text style={styles.imageDescription}>{currentLevelData.description}</Text>
+        <Animated.View style={[styles.imageContainer, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}> 
+          {!imageError && imageSource ? (
+            <>
+              {imageLoading && (
+                <View style={styles.imageLoadingContainer}>
+                  <ActivityIndicator size="large" color={currentTheme.colors.primary} />
+                </View>
+              )}
+              <Image
+                key={`${selectedCategory}-${currentContent.id}`}
+                source={imageSource}
+                style={styles.image}
+                onLoadStart={() => setImageLoading(true)}
+                onLoad={() => {
+                  if (imageLoadTimeoutRef.current) {
+                    clearTimeout(imageLoadTimeoutRef.current);
+                  }
+                  setImageLoading(false);
+                }}
+                onLoadEnd={() => {
+                  if (imageLoadTimeoutRef.current) {
+                    clearTimeout(imageLoadTimeoutRef.current);
+                  }
+                  setImageLoading(false);
+                }}
+                onError={() => {
+                  setImageLoading(false);
+                  setImageError(true);
+                  console.log('Image load error - showing emoji fallback');
+                }}
+                resizeMode="cover"
+              />
+            </>
+          ) : (
+            <View style={styles.emojiContainer}>
+              <Text style={styles.emojiText}>
+                {Array.isArray(currentContent.correctAnswer)
+                  ? '📷'
+                  : EMOJI_FALLBACKS[currentContent.correctAnswer] || '📷'}
+              </Text>
+            </View>
+          )}
+          {showFeedback && (
+            <Animated.View style={[styles.successOverlay, { opacity: successAnim }]}> 
+              <Text style={styles.successText}>✓</Text>
+            </Animated.View>
+          )}
+        </Animated.View>
+        <View style={styles.actionButtonsRow}>
+          <TouchableOpacity style={styles.speakButton} onPress={speakAnswer} activeOpacity={0.8}>
+            <PlayIcon size={20} color="#FFFFFF" />
+            <Text style={styles.buttonText}>{t('hearAnswer')}</Text>
+          </TouchableOpacity>
+          {hasAnimalSound && (
+            <TouchableOpacity style={styles.animalSoundButton} onPress={playAnimalSound} activeOpacity={0.8}>
+              <Text style={[styles.buttonText, { marginLeft: 0 }]}>🔊 {t('animalSound')}</Text>
+            </TouchableOpacity>
+          )}
         </View>
-
-        <View style={styles.sentenceContainer}>
-          <Text style={styles.sentenceText}>
-            {userSentence.length > 0 ? userSentence.join(' ') : 
-              currentLevelData.levelType === 'word' ? 'Tap the correct word below...' :
-              currentLevelData.levelType === 'two-words' ? 'Tap two words to match the picture...' :
-              currentLevelData.levelType === 'three-words' ? 'Tap three words to describe the picture...' :
-              'Tap words below to build your sentence...'}
-          </Text>
-        </View>
-
-        <View style={styles.wordOptionsContainer}>
-          {shuffledOptions.map((word, index) => {
-            const isSelected = userSentence.includes(word);
-            const selectedCount = userSentence.filter(w => w === word).length;
-            const correctCount = currentLevelData.correctSentence.filter(w => w === word).length;
-            const isCorrectlySelected = selectedCount <= correctCount;
-            
-            return (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.wordButton,
-                  isSelected && styles.wordButtonSelected,
-                  isSelected && !isCorrectlySelected && { backgroundColor: '#F44336' }
-                ]}
-                onPress={() => handleWordPress(word)}
-              >
-                <Text style={styles.wordButtonText}>{word}</Text>
+        {isSentenceMode && (
+          <>
+            <View style={styles.sentenceArea}>
+              <View style={styles.sentenceWords}>
+                {!selectedWord || selectedWord.length === 0 ? (
+                  <Text style={{ color: currentTheme.colors.textSecondary }}>{t('tapActionsBelow')}</Text>
+                ) : (
+                  selectedWord.map((word, index) => (
+                    <View key={index} style={styles.wordChip}>
+                      <Text style={styles.wordChipText}>{word}</Text>
+                    </View>
+                  ))
+                )}
+              </View>
+            </View>
+            {selectedWord && selectedWord.length > 0 && (
+              <TouchableOpacity style={styles.removeButton} onPress={removeLastWord} activeOpacity={0.8}>
+                <Text style={[styles.buttonText, { marginLeft: 0 }]}>{t('removeLastWord')}</Text>
               </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.actionButton} onPress={checkSentence}>
-            <Text style={styles.actionButtonText}>
-              {currentLevelData.levelType === 'word' ? 'Check Word' :
-               currentLevelData.levelType === 'two-words' ? 'Check Words' :
-               currentLevelData.levelType === 'three-words' ? 'Check Phrase' :
-               'Check Sentence'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionButton, styles.resetButton]} onPress={resetLevel}>
-            <Text style={styles.actionButtonText}>Reset</Text>
-          </TouchableOpacity>
-        </View>
-
-        {isCorrect !== null && (
-          <View style={styles.feedbackContainer}>
-            <Text style={styles.feedbackText}>
-              {isCorrect ? 
-                (currentLevelData.levelType === 'word' ? '🎯 Great! You found the right word!' :
-                 currentLevelData.levelType === 'two-words' ? '🔗 Perfect! You matched the words!' :
-                 currentLevelData.levelType === 'three-words' ? '📝 Excellent! You built the phrase!' :
-                 '📖 Excellent! You built the sentence correctly!') : 
-                '❌ Not quite right. Try again!'}
-            </Text>
-          </View>
+            )}
+          </>
         )}
+        <View style={styles.wordOptions}>
+          {shuffledOptions.map((word, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.wordOption}
+              onPress={() => handleWordSelect(word)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.wordOptionText}>{t(`words.${word}`) || word}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 };
 
-export default SentenceBuilderScreen;
+export default VisualLearningScreen;

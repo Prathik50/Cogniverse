@@ -12,24 +12,27 @@ import {
   Alert,
 } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { useTTS } from '../contexts/TTSContext';
 import { useUser } from '../contexts/UserContext';
 
-const CONDITIONS = [
-  'Autism Spectrum Disorder',
-  'Down Syndrome',
-  'ADHD',
-  'Dyslexia',
-  'Cerebral Palsy',
-  'Intellectual Disability',
-  'Speech Delay',
-  'Other',
+const getConditions = (t) => [
+  t('conditions.asd'),
+  t('conditions.downSyndrome'),
+  t('conditions.adhd'),
+  t('conditions.dyslexia'),
+  t('conditions.cerebralPalsy'),
+  t('conditions.intellectualDisability'),
+  t('conditions.speechDelay'),
+  t('conditions.other'),
 ];
 
 const LoginScreen = ({ onLoginSuccess }) => {
   const { currentTheme, currentTextSize, currentSpacing } = useTheme();
+  const { t } = useLanguage();
   const { speak } = useTTS();
   const { login, signup } = useUser();
+  const CONDITIONS = getConditions(t);
 
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
@@ -49,8 +52,8 @@ const LoginScreen = ({ onLoginSuccess }) => {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      speak('Please fill in all fields');
-      Alert.alert('Error', 'Please fill in all fields');
+      speak(t('fillAllFields'));
+      Alert.alert(t('error'), t('fillAllFields'));
       return;
     }
 
@@ -58,26 +61,26 @@ const LoginScreen = ({ onLoginSuccess }) => {
     if (result.success) {
       onLoginSuccess();
     } else {
-      Alert.alert('Login Failed', result.error);
+      Alert.alert(t('loginFailed'), result.error);
     }
   };
 
   const handleSignup = async () => {
     if (!signupName || !signupAge || !signupEmail || !signupPassword || !selectedCondition) {
-      speak('Please fill in all fields');
-      Alert.alert('Error', 'Please fill in all fields');
+      speak(t('fillAllFields'));
+      Alert.alert(t('error'), t('fillAllFields'));
       return;
     }
 
     if (signupPassword !== signupConfirmPassword) {
-      speak('Passwords do not match');
-      Alert.alert('Error', 'Passwords do not match');
+      speak(t('passwordsNoMatch'));
+      Alert.alert(t('error'), t('passwordsNoMatch'));
       return;
     }
 
     if (signupPassword.length < 6) {
-      speak('Password must be at least 6 characters');
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      speak(t('passwordTooShort'));
+      Alert.alert(t('error'), t('passwordTooShort'));
       return;
     }
 
@@ -92,12 +95,12 @@ const LoginScreen = ({ onLoginSuccess }) => {
     if (result.success) {
       onLoginSuccess();
     } else {
-      Alert.alert('Signup Failed', result.error);
+      Alert.alert(t('signupFailed'), result.error);
     }
   };
 
   const toggleMode = () => {
-    speak(isLogin ? 'Switching to sign up' : 'Switching to log in');
+    speak(isLogin ? t('switchingToSignup') : t('switchingToLogin'));
     setIsLogin(!isLogin);
   };
 
@@ -224,9 +227,9 @@ const LoginScreen = ({ onLoginSuccess }) => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.title}>CogniVerse</Text>
+          <Text style={styles.title}>{t('appName')}</Text>
           <Text style={styles.subtitle}>
-            {isLogin ? 'Welcome Back!' : 'Create Your Account'}
+            {isLogin ? t('welcomeBack') : t('createAccount')}
           </Text>
 
           {isLogin ? (
@@ -234,7 +237,7 @@ const LoginScreen = ({ onLoginSuccess }) => {
             <>
               <TextInput
                 style={styles.input}
-                placeholder="Email"
+                placeholder={t('email')}
                 placeholderTextColor={currentTheme.colors.textSecondary}
                 value={email}
                 onChangeText={setEmail}
@@ -244,7 +247,7 @@ const LoginScreen = ({ onLoginSuccess }) => {
               <View style={styles.passwordContainer}>
                 <TextInput
                   style={styles.passwordInput}
-                  placeholder="Password"
+                  placeholder={t('password')}
                   placeholderTextColor={currentTheme.colors.textSecondary}
                   value={password}
                   onChangeText={setPassword}
@@ -255,7 +258,7 @@ const LoginScreen = ({ onLoginSuccess }) => {
                 </TouchableOpacity>
               </View>
               <TouchableOpacity style={styles.primaryButton} onPress={handleLogin}>
-                <Text style={styles.primaryButtonText}>Log In</Text>
+                <Text style={styles.primaryButtonText}>{t('login')}</Text>
               </TouchableOpacity>
             </>
           ) : (
@@ -263,14 +266,14 @@ const LoginScreen = ({ onLoginSuccess }) => {
             <>
               <TextInput
                 style={styles.input}
-                placeholder="Full Name"
+                placeholder={t('fullName')}
                 placeholderTextColor={currentTheme.colors.textSecondary}
                 value={signupName}
                 onChangeText={setSignupName}
               />
               <TextInput
                 style={styles.input}
-                placeholder="Age"
+                placeholder={t('age')}
                 placeholderTextColor={currentTheme.colors.textSecondary}
                 value={signupAge}
                 onChangeText={setSignupAge}
@@ -278,7 +281,7 @@ const LoginScreen = ({ onLoginSuccess }) => {
               />
               <TextInput
                 style={styles.input}
-                placeholder="Email"
+                placeholder={t('email')}
                 placeholderTextColor={currentTheme.colors.textSecondary}
                 value={signupEmail}
                 onChangeText={setSignupEmail}
@@ -288,7 +291,7 @@ const LoginScreen = ({ onLoginSuccess }) => {
               <View style={styles.passwordContainer}>
                 <TextInput
                   style={styles.passwordInput}
-                  placeholder="Password"
+                  placeholder={t('password')}
                   placeholderTextColor={currentTheme.colors.textSecondary}
                   value={signupPassword}
                   onChangeText={setSignupPassword}
@@ -301,7 +304,7 @@ const LoginScreen = ({ onLoginSuccess }) => {
               <View style={styles.passwordContainer}>
                 <TextInput
                   style={styles.passwordInput}
-                  placeholder="Confirm Password"
+                  placeholder={t('confirmPassword')}
                   placeholderTextColor={currentTheme.colors.textSecondary}
                   value={signupConfirmPassword}
                   onChangeText={setSignupConfirmPassword}
@@ -314,7 +317,7 @@ const LoginScreen = ({ onLoginSuccess }) => {
                   onPress={() => setShowConditionDropdown(!showConditionDropdown)}
                 >
                   <Text style={selectedCondition ? styles.dropdownText : styles.dropdownPlaceholder}>
-                    {selectedCondition || 'Select Condition'}
+                    {selectedCondition || t('selectCondition')}
                   </Text>
                   <Text style={styles.dropdownText}>{showConditionDropdown ? '▲' : '▼'}</Text>
                 </TouchableOpacity>
@@ -338,7 +341,7 @@ const LoginScreen = ({ onLoginSuccess }) => {
                 )}
               </View>
               <TouchableOpacity style={styles.primaryButton} onPress={handleSignup}>
-                <Text style={styles.primaryButtonText}>Sign Up</Text>
+                <Text style={styles.primaryButtonText}>{t('signup')}</Text>
               </TouchableOpacity>
             </>
           )}
@@ -346,8 +349,8 @@ const LoginScreen = ({ onLoginSuccess }) => {
           <TouchableOpacity style={styles.toggleButton} onPress={toggleMode}>
             <Text style={styles.toggleText}>
               {isLogin
-                ? "Don't have an account? Sign Up"
-                : 'Already have an account? Log In'}
+                ? t('noAccount')
+                : t('hasAccount')}
             </Text>
           </TouchableOpacity>
         </ScrollView>

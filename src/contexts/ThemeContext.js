@@ -34,17 +34,25 @@ export const ThemeProvider = ({ children }) => {
     calm: {
       name: 'Calm',
       colors: {
-        primary: '#4A90E2',
-        secondary: '#7ED321',
-        background: '#F8F9FA',
+        primary: '#6366F1',        // Modern indigo
+        primaryDark: '#4F46E5',
+        primaryLight: '#818CF8',
+        secondary: '#10B981',      // Vibrant green
+        background: '#F9FAFB',     // Soft gray
         surface: '#FFFFFF',
-        text: '#2C3E50',
-        textSecondary: '#7F8C8D',
-        border: '#E1E8ED',
-        success: '#27AE60',
-        warning: '#F39C12',
-        error: '#E74C3C',
-        accent: '#9B59B6',
+        surfaceElevated: '#FFFFFF',
+        text: '#111827',           // Rich black
+        textSecondary: '#6B7280',  // Medium gray
+        border: '#E5E7EB',
+        success: '#10B981',
+        warning: '#F59E0B',
+        error: '#EF4444',
+        accent: '#8B5CF6',         // Purple
+        accentSecondary: '#EC4899', // Pink
+        gradient1: '#6366F1',
+        gradient2: '#8B5CF6',
+        cardBg: '#FFFFFF',
+        shadow: 'rgba(0, 0, 0, 0.1)',
       },
       fonts: {
         regular: 'System',

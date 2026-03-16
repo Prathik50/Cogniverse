@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   SafeAreaView,
   StyleSheet,
@@ -10,10 +10,12 @@ import {
   TextInput,
   Modal,
   Alert,
+  Animated,
 } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTTS } from '../contexts/TTSContext';
 import { useUser } from '../contexts/UserContext';
+import { BackArrowIcon } from '../components/icons/ConditionIcons';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -31,7 +33,8 @@ const CONDITIONS = [
 const ChildDashboardScreen = ({ onBack }) => {
   const { currentTheme, currentTextSize, currentSpacing } = useTheme();
   const { speak } = useTTS();
-  const { userData, updateUserData } = useUser();
+  // Added 'logout' from the useUser context
+  const { userData, updateUserData, logout } = useUser();
   
   const [isEditing, setIsEditing] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -39,6 +42,33 @@ const ChildDashboardScreen = ({ onBack }) => {
   const [editAge, setEditAge] = useState('');
   const [editCondition, setEditCondition] = useState('');
   const [showConditionDropdown, setShowConditionDropdown] = useState(false);
+  
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+
+  // Entrance animation
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   // Daily login tracking - in a real app, this would be fetched from storage
   const [loginStreak, setLoginStreak] = useState(0);
@@ -92,6 +122,12 @@ const ChildDashboardScreen = ({ onBack }) => {
   const handleBack = () => {
     speak('Returning to main menu');
     onBack();
+  };
+
+  // New function to handle logout
+  const handleLogout = () => {
+    speak('Logging out. Goodbye!');
+    logout(); // This should navigate user back to login screen via context
   };
 
   const handleEdit = () => {
@@ -149,6 +185,11 @@ const ChildDashboardScreen = ({ onBack }) => {
       justifyContent: 'center',
       alignItems: 'center',
       marginRight: 16 * currentSpacing.scale,
+      shadowColor: currentTheme.colors.primary,
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.3,
+      shadowRadius: 6,
+      elevation: 5,
     },
     backIcon: {
       fontSize: 24 * currentTextSize.scale,
@@ -165,22 +206,23 @@ const ChildDashboardScreen = ({ onBack }) => {
     },
     section: {
       backgroundColor: currentTheme.colors.surface,
-      borderRadius: 16 * currentSpacing.scale,
+      borderRadius: 20 * currentSpacing.scale,
       padding: 24 * currentSpacing.scale,
       marginBottom: 20 * currentSpacing.scale,
       borderWidth: 1,
-      borderColor: currentTheme.colors.border,
-      shadowColor: currentTheme.colors.text,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 8,
-      elevation: 3,
+      borderColor: currentTheme.colors.border || 'rgba(0,0,0,0.05)',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.12,
+      shadowRadius: 16,
+      elevation: 8,
     },
     sectionTitle: {
-      fontSize: 20 * currentTextSize.scale,
-      fontWeight: 'bold',
+      fontSize: 22 * currentTextSize.scale,
+      fontWeight: '700',
       color: currentTheme.colors.text,
       marginBottom: 16 * currentSpacing.scale,
+      letterSpacing: 0.3,
     },
     profileRow: {
       flexDirection: 'row',
@@ -260,18 +302,44 @@ const ChildDashboardScreen = ({ onBack }) => {
       textAlign: 'center',
       marginTop: 8 * currentSpacing.scale,
     },
+    // --- New & Modified Styles ---
+    buttonContainer: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+      marginTop: 12 * currentSpacing.scale,
+    },
     editButton: {
       backgroundColor: currentTheme.colors.primary,
-      borderRadius: 8 * currentSpacing.scale,
-      padding: 8 * currentSpacing.scale,
-      marginTop: 12 * currentSpacing.scale,
-      alignSelf: 'flex-end',
+      borderRadius: 12 * currentSpacing.scale,
+      paddingHorizontal: 16 * currentSpacing.scale,
+      paddingVertical: 10 * currentSpacing.scale,
+      marginLeft: 8 * currentSpacing.scale,
+      shadowColor: currentTheme.colors.primary,
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.3,
+      shadowRadius: 6,
+      elevation: 4,
     },
     editButtonText: {
       color: currentTheme.colors.surface,
       fontSize: 14 * currentTextSize.scale,
       fontWeight: 'bold',
     },
+    logoutButton: {
+      backgroundColor: currentTheme.colors.surface,
+      borderColor: currentTheme.colors.textSecondary,
+      borderWidth: 1.5,
+      borderRadius: 12 * currentSpacing.scale,
+      paddingHorizontal: 16 * currentSpacing.scale,
+      paddingVertical: 10 * currentSpacing.scale,
+    },
+    logoutButtonText: {
+      color: currentTheme.colors.textSecondary,
+      fontSize: 14 * currentTextSize.scale,
+      fontWeight: 'bold',
+    },
+    // --- End of New & Modified Styles ---
     modalOverlay: {
       flex: 1,
       backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -363,15 +431,25 @@ const ChildDashboardScreen = ({ onBack }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <Text style={styles.backIcon}>←</Text>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={handleBack}
+          activeOpacity={0.7}
+        >
+          <BackArrowIcon size={24 * currentTextSize.scale} color={currentTheme.colors.surface} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Child Dashboard</Text>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Profile Section */}
-        <View style={styles.section}>
+        <Animated.View style={[
+          styles.section,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }, { scale: scaleAnim }]
+          }
+        ]}>
           <Text style={styles.sectionTitle}>Profile</Text>
           <View style={styles.profileRow}>
             <Text style={styles.profileIcon}>👤</Text>
@@ -382,17 +460,38 @@ const ChildDashboardScreen = ({ onBack }) => {
               <Text style={styles.profileDetail}>Email: {userData?.email || 'Not set'}</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
-            <Text style={styles.editButtonText}>✏️ Edit Profile</Text>
-          </TouchableOpacity>
-        </View>
+          {/* --- Updated Button Container --- */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity 
+              style={styles.logoutButton} 
+              onPress={handleLogout}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.logoutButtonText}>Logout</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.editButton} 
+              onPress={handleEdit}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.editButtonText}>Edit Profile</Text>
+            </TouchableOpacity>
+          </View>
+          {/* --- End of Updated Button Container --- */}
+        </Animated.View>
 
         {/* Daily Login Calendar */}
-        <View style={styles.section}>
+        <Animated.View style={[
+          styles.section,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }, { scale: scaleAnim }]
+          }
+        ]}>
           <Text style={styles.sectionTitle}>Daily Login Streak</Text>
           <View style={styles.streakContainer}>
             <Text style={styles.streakNumber}>{loginStreak}</Text>
-            <Text style={styles.streakLabel}>Day Streak 🔥</Text>
+            <Text style={styles.streakLabel}>Day Streak</Text>
           </View>
           <View style={styles.calendarGrid}>
             {monthlyLogins.map((day, index) => (
@@ -406,10 +505,16 @@ const ChildDashboardScreen = ({ onBack }) => {
             ))}
           </View>
           <Text style={styles.legend}>Last 30 days login history</Text>
-        </View>
+        </Animated.View>
 
         {/* Progress Graph */}
-        <View style={styles.section}>
+        <Animated.View style={[
+          styles.section,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }, { scale: scaleAnim }]
+          }
+        ]}>
           <Text style={styles.sectionTitle}>Progress Overview</Text>
           <View style={styles.graphContainer}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-around', height: graphHeight, alignItems: 'flex-end' }}>
@@ -437,7 +542,7 @@ const ChildDashboardScreen = ({ onBack }) => {
           <Text style={styles.legend}>
             Improvement in cognitive thinking and activity engagement
           </Text>
-        </View>
+        </Animated.View>
       </ScrollView>
 
       {/* Edit Profile Modal */}
@@ -518,4 +623,3 @@ const ChildDashboardScreen = ({ onBack }) => {
 };
 
 export default ChildDashboardScreen;
-

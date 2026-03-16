@@ -11,6 +11,7 @@ import {
   TextInput,
 } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { useTTS } from '../contexts/TTSContext';
 
 const SettingsScreen = ({ onBack }) => {
@@ -31,7 +32,8 @@ const SettingsScreen = ({ onBack }) => {
     spacingOptions,
   } = useTheme();
 
-  const { isEnabled, setIsEnabled, rate, setRate, getLanguageName } = useTTS();
+  const { t } = useLanguage();
+  const { isEnabled, setIsEnabled, rate, setRate } = useTTS();
 
   const handleThemeChange = (newTheme) => {
     setTheme(newTheme);
@@ -155,17 +157,17 @@ const SettingsScreen = ({ onBack }) => {
         <TouchableOpacity style={styles.backButton} onPress={onBack}>
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Settings</Text>
+        <Text style={styles.title}>{t('settings')}</Text>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Visual Settings */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Visual Settings</Text>
+          <Text style={styles.sectionTitle}>{t('visualSettings')}</Text>
           
           <View style={styles.option}>
-            <Text style={styles.optionLabel}>Theme</Text>
-            <Text style={styles.optionValue}>{themes[theme].name}</Text>
+            <Text style={styles.optionLabel}>{t('theme')}</Text>
+            <Text style={styles.optionValue}>{t(`themes.${theme}`)}</Text>
           </View>
           
           {Object.entries(themes).map(([key, themeData]) => (
@@ -180,7 +182,7 @@ const SettingsScreen = ({ onBack }) => {
                   { backgroundColor: themeData.colors.primary }
                 ]}
               />
-              <Text style={styles.themeName}>{themeData.name}</Text>
+              <Text style={styles.themeName}>{t(`themes.${key}`)}</Text>
               {theme === key && <Text style={styles.selectedIndicator}>✓</Text>}
             </TouchableOpacity>
           ))}
@@ -188,11 +190,11 @@ const SettingsScreen = ({ onBack }) => {
 
         {/* Text Settings */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Text Settings</Text>
+          <Text style={styles.sectionTitle}>{t('textSettings')}</Text>
           
           <View style={styles.option}>
-            <Text style={styles.optionLabel}>Text Size</Text>
-            <Text style={styles.optionValue}>{textSizes[textSize].name}</Text>
+            <Text style={styles.optionLabel}>{t('textSize')}</Text>
+            <Text style={styles.optionValue}>{t(`textSizes.${textSize}`)}</Text>
           </View>
           
           {Object.entries(textSizes).map(([key, sizeData]) => (
@@ -201,7 +203,7 @@ const SettingsScreen = ({ onBack }) => {
               style={styles.option}
               onPress={() => handleTextSizeChange(key)}
             >
-              <Text style={styles.optionLabel}>{sizeData.name}</Text>
+              <Text style={styles.optionLabel}>{t(`textSizes.${key}`)}</Text>
               {textSize === key && <Text style={styles.selectedIndicator}>✓</Text>}
             </TouchableOpacity>
           ))}
@@ -209,11 +211,11 @@ const SettingsScreen = ({ onBack }) => {
 
         {/* Spacing Settings */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Spacing Settings</Text>
+          <Text style={styles.sectionTitle}>{t('spacingSettings')}</Text>
           
           <View style={styles.option}>
-            <Text style={styles.optionLabel}>Spacing</Text>
-            <Text style={styles.optionValue}>{spacingOptions[spacing].name}</Text>
+            <Text style={styles.optionLabel}>{t('spacing')}</Text>
+            <Text style={styles.optionValue}>{t(`spacingOptions.${spacing}`)}</Text>
           </View>
           
           {Object.entries(spacingOptions).map(([key, spacingData]) => (
@@ -222,7 +224,7 @@ const SettingsScreen = ({ onBack }) => {
               style={styles.option}
               onPress={() => handleSpacingChange(key)}
             >
-              <Text style={styles.optionLabel}>{spacingData.name}</Text>
+              <Text style={styles.optionLabel}>{t(`spacingOptions.${key}`)}</Text>
               {spacing === key && <Text style={styles.selectedIndicator}>✓</Text>}
             </TouchableOpacity>
           ))}
@@ -230,18 +232,18 @@ const SettingsScreen = ({ onBack }) => {
 
         {/* Language Settings */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Language Settings</Text>
+          <Text style={styles.sectionTitle}>{t('languageSettings')}</Text>
           
           <View style={styles.option}>
-            <Text style={styles.optionLabel}>Language</Text>
-            <Text style={styles.optionValue}>{getLanguageName(language)}</Text>
+            <Text style={styles.optionLabel}>{t('language')}</Text>
+            <Text style={styles.optionValue}>{t(`languages.${language === 'en' ? 'english' : 'hindi'}`)}</Text>
           </View>
           
           <TouchableOpacity
             style={styles.option}
             onPress={() => handleLanguageChange('en')}
           >
-            <Text style={styles.optionLabel}>English</Text>
+            <Text style={styles.optionLabel}>{t('languages.english')}</Text>
             {language === 'en' && <Text style={styles.selectedIndicator}>✓</Text>}
           </TouchableOpacity>
           
@@ -249,17 +251,17 @@ const SettingsScreen = ({ onBack }) => {
             style={styles.option}
             onPress={() => handleLanguageChange('hi')}
           >
-            <Text style={styles.optionLabel}>हिंदी (Hindi)</Text>
+            <Text style={styles.optionLabel}>{t('languages.hindi')}</Text>
             {language === 'hi' && <Text style={styles.selectedIndicator}>✓</Text>}
           </TouchableOpacity>
         </View>
 
         {/* TTS Settings */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Voice Settings</Text>
+          <Text style={styles.sectionTitle}>{t('voiceSettings')}</Text>
           
           <View style={styles.option}>
-            <Text style={styles.optionLabel}>Enable Voice</Text>
+            <Text style={styles.optionLabel}>{t('enableVoice')}</Text>
             <Switch
               value={isEnabled}
               onValueChange={handleTTSEnable}
@@ -269,7 +271,7 @@ const SettingsScreen = ({ onBack }) => {
           </View>
           
           <View style={styles.option}>
-            <Text style={styles.optionLabel}>Speech Rate</Text>
+            <Text style={styles.optionLabel}>{t('speechRate')}</Text>
             <Text style={styles.optionValue}>{Math.round(rate * 100)}%</Text>
           </View>
         </View>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ThemeProvider } from './src/contexts/ThemeContext';
+import { LanguageProvider } from './src/contexts/LanguageContext';
 import { TTSProvider } from './src/contexts/TTSContext';
 import { ApiProvider } from './src/contexts/ApiContext';
 import { UserProvider, useUser } from './src/contexts/UserContext';
@@ -28,13 +29,15 @@ const AppContent = () => {
 const App = () => {
   return (
     <ThemeProvider>
-      <TTSProvider>
-        <ApiProvider>
-          <UserProvider>
-            <AppContent />
-          </UserProvider>
-        </ApiProvider>
-      </TTSProvider>
+      <LanguageProvider>
+        <TTSProvider>
+          <ApiProvider>
+            <UserProvider>
+              <AppContent />
+            </UserProvider>
+          </ApiProvider>
+        </TTSProvider>
+      </LanguageProvider>
     </ThemeProvider>
   );
 };

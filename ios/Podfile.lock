@@ -1166,6 +1166,8 @@ PODS:
     - React-utils (= 0.74.2)
   - RNCAsyncStorage (2.2.0):
     - React-Core
+  - RNSVG (15.14.0):
+    - React-Core
   - SocketRocket (0.7.0)
   - TextToSpeech (4.1.1):
     - React-Core
@@ -1228,6 +1230,7 @@ DEPENDENCIES:
   - React-utils (from `../node_modules/react-native/ReactCommon/react/utils`)
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
+  - RNSVG (from `../node_modules/react-native-svg`)
   - TextToSpeech (from `../node_modules/react-native-tts`)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
@@ -1345,6 +1348,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon"
   RNCAsyncStorage:
     :path: "../node_modules/@react-native-async-storage/async-storage"
+  RNSVG:
+    :path: "../node_modules/react-native-svg"
   TextToSpeech:
     :path: "../node_modules/react-native-tts"
   Yoga:
@@ -1405,6 +1410,7 @@ SPEC CHECKSUMS:
   React-utils: 08bb648cea0f37a0aa5df0c4f9ef50e5484ee0eb
   ReactCommon: 4968ff446d467c4def1945125e59f82e3e986af3
   RNCAsyncStorage: b44e8a4e798c3e1f56bffccd0f591f674fb9198f
+  RNSVG: 197ddaa1219171ebb0542bc4d10bcde7d6f39f57
   SocketRocket: abac6f5de4d4d62d24e11868d7a2f427e0ef940d
   TextToSpeech: 89b239221ec378d213af422d14789a729705360b
   Yoga: ae3c32c514802d30f687a04a6a35b348506d411f
