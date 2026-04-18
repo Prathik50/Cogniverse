@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   SafeAreaView,
   StyleSheet,
@@ -9,190 +9,160 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Animated,
+  Dimensions,
 } from 'react-native';
+import Svg, { Defs, LinearGradient, Stop, Path } from 'react-native-svg';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTTS } from '../contexts/TTSContext';
+import { BackArrowIcon } from '../components/icons/ConditionIcons';
 
+const { width, height } = Dimensions.get('window');
+
+// ----------------------------------------------------------------------------
+// Reusable Premium Components (FloatingOrb, TouchCard)
+// ----------------------------------------------------------------------------
+const FloatingOrb = ({ size, color, top, left, delay = 0 }) => {
+  const floatAnim = useRef(new Animated.Value(0)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+  
+  useEffect(() => {
+    Animated.timing(opacityAnim, { toValue: 1, duration: 1000, delay, useNativeDriver: true }).start();
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, { toValue: 1, duration: 3000 + delay, useNativeDriver: true }),
+        Animated.timing(floatAnim, { toValue: 0, duration: 3000 + delay, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
+
+  const translateY = floatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -12] });
+  return (
+    <Animated.View
+      style={{
+        position: 'absolute', top, left, width: size, height: size,
+        borderRadius: size / 2, backgroundColor: color,
+        opacity: opacityAnim, transform: [{ translateY }],
+        pointerEvents: 'none',
+      }}
+    />
+  );
+};
+
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+
+const TouchCard = ({ children, onPress, style, disabled }) => {
+  const scale = useRef(new Animated.Value(1)).current;
+  return (
+    <AnimatedTouchable
+      style={[style, { transform: [{ scale }] }]}
+      activeOpacity={0.9}
+      disabled={disabled}
+      onPressIn={() => Animated.spring(scale, { toValue: 0.96, useNativeDriver: true }).start()}
+      onPressOut={() => Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start()}
+      onPress={onPress}
+    >
+      {children}
+    </AnimatedTouchable>
+  );
+};
+
+// ----------------------------------------------------------------------------
+// Main Screen
+// ----------------------------------------------------------------------------
 const StoryTimeScreen = ({ onBack }) => {
-  const { currentTheme, currentTextSize, currentSpacing } = useTheme();
-  const { speak } = useTTS();
+  const { currentTheme } = useTheme();
+  const { speak, stop } = useTTS();
   const [customPrompt, setCustomPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [currentStory, setCurrentStory] = useState(null);
   const [currentStep, setCurrentStep] = useState(0);
 
+  // Animations for screen transitions
+  const contentFade = useRef(new Animated.Value(0)).current;
+  const contentSlide = useRef(new Animated.Value(40)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(contentFade, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.spring(contentSlide, { toValue: 0, tension: 40, friction: 8, useNativeDriver: true }),
+    ]).start();
+  }, [currentStory]);
+
   const sampleStories = [
     {
-      id: 'birthday-party',
-      title: 'Going to a Birthday Party',
-      prompt: 'We are going to Prathik\'s birthday party',
+      id: 'birthday-party', title: 'Going to a Birthday Party',
+      prompt: "We are going to Prathik's birthday party",
+      color: '#F59E0B', icon: '🎂',
       steps: [
-        {
-          image: '🎂',
-          text: 'We get ready to go to the party. We put on nice clothes and brush our teeth.',
-          audio: 'We get ready to go to the party. We put on nice clothes and brush our teeth.'
-        },
-        {
-          image: '🚗',
-          text: 'We drive to Prathik\'s house. The car ride is fun and we sing songs.',
-          audio: 'We drive to Prathik\'s house. The car ride is fun and we sing songs.'
-        },
-        {
-          image: '🏠',
-          text: 'We arrive at Prathik\'s house. We ring the doorbell and wait for someone to answer.',
-          audio: 'We arrive at Prathik\'s house. We ring the doorbell and wait for someone to answer.'
-        },
-        {
-          image: '👋',
-          text: 'We say hello to Prathik and his family. We give him a birthday present.',
-          audio: 'We say hello to Prathik and his family. We give him a birthday present.'
-        },
-        {
-          image: '🎮',
-          text: 'We play games with other children. We have fun and make new friends.',
-          audio: 'We play games with other children. We have fun and make new friends.'
-        },
-        {
-          image: '🎁',
-          text: 'We watch Prathik open his presents. We clap and cheer for him.',
-          audio: 'We watch Prathik open his presents. We clap and cheer for him.'
-        },
-        {
-          image: '🍰',
-          text: 'We eat birthday cake and ice cream. The cake is delicious!',
-          audio: 'We eat birthday cake and ice cream. The cake is delicious!'
-        },
-        {
-          image: '👋',
-          text: 'We say thank you and goodbye. We had a wonderful time at the party!',
-          audio: 'We say thank you and goodbye. We had a wonderful time at the party!'
-        }
+        { image: '👕', text: 'We get ready to go to the party. We put on nice clothes.', audio: 'We get ready to go to the party.' },
+        { image: '🚗', text: 'We drive to the house. The car ride is fun and we sing songs.', audio: 'We drive to the house.' },
+        { image: '👋', text: 'We say hello to our friends. We give them a present.', audio: 'We say hello.' },
+        { image: '🎮', text: 'We play games with other children. We have fun.', audio: 'We play games and have fun.' },
+        { image: '🍰', text: 'We eat birthday cake and ice cream. Delicious!', audio: 'We eat cake.' },
       ]
     },
     {
-      id: 'doctor-visit',
-      title: 'Going to the Doctor',
+      id: 'doctor-visit', title: 'Going to the Doctor',
       prompt: 'We are going to visit the doctor',
+      color: '#10B981', icon: '🩺',
       steps: [
-        {
-          image: '🏥',
-          text: 'We arrive at the doctor\'s office. We check in at the front desk.',
-          audio: 'We arrive at the doctor\'s office. We check in at the front desk.'
-        },
-        {
-          image: '⏰',
-          text: 'We wait in the waiting room. We can read books or play quietly.',
-          audio: 'We wait in the waiting room. We can read books or play quietly.'
-        },
-        {
-          image: '👩‍⚕️',
-          text: 'The nurse calls our name. We follow her to the examination room.',
-          audio: 'The nurse calls our name. We follow her to the examination room.'
-        },
-        {
-          image: '🌡️',
-          text: 'The doctor checks our temperature and listens to our heart.',
-          audio: 'The doctor checks our temperature and listens to our heart.'
-        },
-        {
-          image: '💉',
-          text: 'We might need a shot. It will hurt for just a moment, but it helps us stay healthy.',
-          audio: 'We might need a shot. It will hurt for just a moment, but it helps us stay healthy.'
-        },
-        {
-          image: '🍭',
-          text: 'The doctor gives us a sticker or lollipop for being brave. We did great!',
-          audio: 'The doctor gives us a sticker or lollipop for being brave. We did great!'
-        }
+        { image: '🏥', text: "We arrive at the doctor's office. We check in at the front desk.", audio: 'We arrive at the doctors office.' },
+        { image: '⏰', text: 'We wait in the waiting room. We can read books quietly.', audio: 'We wait in the waiting room.' },
+        { image: '👩‍⚕️', text: 'The nurse calls our name. We follow her to the room.', audio: 'The nurse calls our name.' },
+        { image: '🌡️', text: 'The doctor checks our temperature and listens to our heart.', audio: 'The doctor checks us.' },
+        { image: '🍭', text: 'The doctor gives us a sticker for being brave. We did great!', audio: 'We did great and got a sticker!' },
       ]
     },
     {
-      id: 'grocery-store',
-      title: 'Going to the Grocery Store',
+      id: 'grocery-store', title: 'Going to the Grocery Store',
       prompt: 'We are going shopping at the grocery store',
+      color: '#3B82F6', icon: '🛒',
       steps: [
-        {
-          image: '🛒',
-          text: 'We get a shopping cart and make a list of things we need to buy.',
-          audio: 'We get a shopping cart and make a list of things we need to buy.'
-        },
-        {
-          image: '🥛',
-          text: 'We walk through the aisles and find the milk and bread.',
-          audio: 'We walk through the aisles and find the milk and bread.'
-        },
-        {
-          image: '🍎',
-          text: 'We pick out fresh fruits and vegetables. We choose the best ones.',
-          audio: 'We pick out fresh fruits and vegetables. We choose the best ones.'
-        },
-        {
-          image: '💰',
-          text: 'We go to the checkout counter and pay for our groceries.',
-          audio: 'We go to the checkout counter and pay for our groceries.'
-        },
-        {
-          image: '🏠',
-          text: 'We carry our bags to the car and drive home. Shopping is complete!',
-          audio: 'We carry our bags to the car and drive home. Shopping is complete!'
-        }
+        { image: '🛒', text: 'We get a shopping cart and make a list of things we need.', audio: 'We get a shopping cart.' },
+        { image: '🥛', text: 'We walk through the aisles and find the milk and bread.', audio: 'We find the milk and bread.' },
+        { image: '🍎', text: 'We pick out fresh fruits and vegetables. We choose the best ones.', audio: 'We pick out fresh food.' },
+        { image: '💰', text: 'We go to the checkout counter and pay for our groceries.', audio: 'We pay for our groceries.' },
+        { image: '🏠', text: 'We carry our bags to the car and drive home!', audio: 'We carry our bags and go home.' },
       ]
     }
   ];
 
   const handleStorySelect = (story) => {
+    contentFade.setValue(0);
+    contentSlide.setValue(40);
     setCurrentStory(story);
     setCurrentStep(0);
     speak(`Starting story: ${story.title}`);
   };
 
-  const handleCustomStory = async () => {
+  const handleCustomStory = () => {
     if (!customPrompt.trim()) {
-      Alert.alert('Error', 'Please enter a story prompt');
+      Alert.alert('Error', 'Please enter a story prompt.');
       return;
     }
-
     setIsLoading(true);
-    // In a real implementation, this would call the Gemini API
-    // For now, we'll create a simple generated story
+    // Simulate generation...
     setTimeout(() => {
+      contentFade.setValue(0);
+      contentSlide.setValue(40);
       const generatedStory = {
-        id: 'custom',
-        title: 'Custom Story',
-        prompt: customPrompt,
+        id: 'custom', title: 'Custom Story', prompt: customPrompt, color: '#8B5CF6', icon: '✨',
         steps: [
-          {
-            image: '📝',
-            text: `We are preparing for: ${customPrompt}`,
-            audio: `We are preparing for: ${customPrompt}`
-          },
-          {
-            image: '🚶',
-            text: 'We walk to our destination. We stay calm and focused.',
-            audio: 'We walk to our destination. We stay calm and focused.'
-          },
-          {
-            image: '👀',
-            text: 'We observe what is happening around us. We pay attention to details.',
-            audio: 'We observe what is happening around us. We pay attention to details.'
-          },
-          {
-            image: '😊',
-            text: 'We participate and have a good time. We remember to be polite.',
-            audio: 'We participate and have a good time. We remember to be polite.'
-          },
-          {
-            image: '🏠',
-            text: 'We finish our activity and return home. We did a great job!',
-            audio: 'We finish our activity and return home. We did a great job!'
-          }
+          { image: '📝', text: `We are preparing for: ${customPrompt}`, audio: `Preparing for ${customPrompt}` },
+          { image: '🚶', text: 'We head to our destination calmly and focused.', audio: 'We stay calm.' },
+          { image: '👀', text: 'We observe what is happening around us and pay attention.', audio: 'We pay attention.' },
+          { image: '😊', text: 'We participate, have a good time, and remember to be polite.', audio: 'We have a good time.' },
+          { image: '🌟', text: 'We finish our activity and did a fantastic job!', audio: 'We did a fantastic job!' }
         ]
       };
       setCurrentStory(generatedStory);
       setCurrentStep(0);
       setIsLoading(false);
       speak(`Starting custom story: ${customPrompt}`);
-    }, 2000);
+    }, 1500);
   };
 
   const nextStep = () => {
@@ -204,276 +174,216 @@ const StoryTimeScreen = ({ onBack }) => {
   };
 
   const previousStep = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-    }
+    if (currentStep > 0) setCurrentStep(currentStep - 1);
   };
 
   const playCurrentStep = () => {
     if (currentStory) {
+      stop();
       speak(currentStory.steps[currentStep].audio);
     }
   };
 
   const resetStory = () => {
+    contentFade.setValue(0);
+    contentSlide.setValue(40);
     setCurrentStory(null);
     setCurrentStep(0);
     setCustomPrompt('');
+    stop();
   };
 
   const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: currentTheme.colors.background,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: currentTheme.colors.surface,
-      padding: 16 * currentSpacing.scale,
-      borderBottomWidth: 1,
-      borderBottomColor: currentTheme.colors.border,
-    },
+    container: { flex: 1, backgroundColor: '#F8FAFC' },
+    waveContainer: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 0 },
+    headerTop: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, marginTop: 16, zIndex: 10 },
     backButton: {
-      backgroundColor: currentTheme.colors.primary,
-      borderRadius: 25 * currentSpacing.scale,
-      width: 50 * currentSpacing.scale,
-      height: 50 * currentSpacing.scale,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginRight: 16 * currentSpacing.scale,
+      backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 20, width: 44, height: 44,
+      justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)',
     },
-    backIcon: {
-      fontSize: 24 * currentTextSize.scale,
-      color: currentTheme.colors.surface,
+    headerTitles: { flex: 1, alignItems: 'center', marginRight: 44 },
+    title: { fontSize: 24, fontWeight: '900', color: '#FFFFFF', letterSpacing: 0.3, textShadowColor: 'rgba(0,0,0,0.2)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 8 },
+    subtitleText: { fontSize: 13, color: 'rgba(255,255,255,0.9)', fontWeight: '600', marginTop: 3, letterSpacing: 1, textTransform: 'uppercase' },
+    
+    scrollContent: { paddingHorizontal: 24, paddingBottom: 50, paddingTop: 30 },
+    
+    // Custom generator
+    generatorCard: {
+      backgroundColor: '#FFFFFF', borderRadius: 24, padding: 24, marginBottom: 28,
+      shadowColor: '#4338CA', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 8,
+      borderWidth: 1, borderColor: '#EEF2FF'
     },
-    headerTitle: {
-      fontSize: 20 * currentTextSize.scale,
-      fontWeight: '600',
-      color: currentTheme.colors.text,
-      flex: 1,
+    genTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B', marginBottom: 12 },
+    input: {
+      backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, fontSize: 16, color: '#334155',
+      borderWidth: 1, borderColor: '#E2E8F0', height: 100, textAlignVertical: 'top', marginBottom: 16
     },
-    content: {
-      flex: 1,
-      padding: 20 * currentSpacing.scale,
+    genBtn: {
+      backgroundColor: '#4338CA', borderRadius: 16, paddingVertical: 14, alignItems: 'center',
+      shadowColor: '#4338CA', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4
     },
-    instructionText: {
-      fontSize: 18 * currentTextSize.scale,
-      color: currentTheme.colors.text,
-      textAlign: 'center',
-      marginBottom: 20 * currentSpacing.scale,
-      fontWeight: '500',
-    },
-    customPromptContainer: {
-      backgroundColor: currentTheme.colors.surface,
-      borderRadius: 16 * currentSpacing.scale,
-      padding: 20 * currentSpacing.scale,
-      marginBottom: 20 * currentSpacing.scale,
-      borderWidth: 1,
-      borderColor: currentTheme.colors.border,
-    },
-    customPromptTitle: {
-      fontSize: 18 * currentTextSize.scale,
-      fontWeight: 'bold',
-      color: currentTheme.colors.text,
-      marginBottom: 12 * currentSpacing.scale,
-    },
-    textInput: {
-      borderColor: currentTheme.colors.border,
-      borderWidth: 1,
-      borderRadius: 12 * currentSpacing.scale,
-      paddingHorizontal: 15 * currentSpacing.scale,
-      paddingVertical: 12 * currentSpacing.scale,
-      fontSize: 16 * currentTextSize.scale,
-      backgroundColor: currentTheme.colors.background,
-      color: currentTheme.colors.text,
-      marginBottom: 12 * currentSpacing.scale,
-    },
-    generateButton: {
-      backgroundColor: currentTheme.colors.primary,
-      paddingHorizontal: 24 * currentSpacing.scale,
-      paddingVertical: 12 * currentSpacing.scale,
-      borderRadius: 25 * currentSpacing.scale,
-      alignItems: 'center',
-    },
-    generateButtonText: {
-      color: currentTheme.colors.surface,
-      fontSize: 16 * currentTextSize.scale,
-      fontWeight: '600',
-    },
+    genBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
+    
+    sectionTitle: { fontSize: 20, fontWeight: '900', color: '#0F172A', marginBottom: 16, marginLeft: 4 },
+    
+    // Story grid cards
     storyCard: {
-      backgroundColor: currentTheme.colors.surface,
-      borderRadius: 16 * currentSpacing.scale,
-      padding: 20 * currentSpacing.scale,
-      marginBottom: 16 * currentSpacing.scale,
-      borderWidth: 1,
-      borderColor: currentTheme.colors.border,
+      backgroundColor: '#FFFFFF', borderRadius: 24, padding: 20, marginBottom: 16, flexDirection: 'row', alignItems: 'center',
+      shadowColor: '#0F172A', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.05, shadowRadius: 16, elevation: 4,
     },
-    storyTitle: {
-      fontSize: 18 * currentTextSize.scale,
-      fontWeight: 'bold',
-      color: currentTheme.colors.text,
-      marginBottom: 8 * currentSpacing.scale,
+    storyIconWrapper: { width: 56, height: 56, borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
+    storyIcon: { fontSize: 26 },
+    storyInfo: { flex: 1 },
+    storyTitle: { fontSize: 17, fontWeight: '800', color: '#1E293B', marginBottom: 4 },
+    storyPrompt: { fontSize: 13, color: '#64748B', fontWeight: '500' },
+    
+    // Story Viewer
+    viewerCard: {
+      backgroundColor: '#FFFFFF', borderRadius: 32, padding: 24, alignItems: 'center',
+      shadowColor: '#0F172A', shadowOffset: { width: 0, height: 16 }, shadowOpacity: 0.08, shadowRadius: 24, elevation: 12,
+      borderWidth: 1, borderColor: '#F1F5F9'
     },
-    storyPrompt: {
-      fontSize: 14 * currentTextSize.scale,
-      color: currentTheme.colors.textSecondary,
-      fontStyle: 'italic',
+    progressHeader: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: 20, alignItems: 'center' },
+    stepBadge: { backgroundColor: '#EEF2FF', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+    stepBadgeText: { color: '#4338CA', fontWeight: '800', fontSize: 14 },
+    closeBtn: { padding: 8, backgroundColor: '#F1F5F9', borderRadius: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+    
+    emojiBox: {
+      width: 140, height: 140, borderRadius: 70, backgroundColor: '#F8FAFC',
+      justifyContent: 'center', alignItems: 'center', marginBottom: 24,
+      borderWidth: 4, borderColor: '#EEF2FF'
     },
-    storyViewer: {
-      backgroundColor: currentTheme.colors.surface,
-      borderRadius: 16 * currentSpacing.scale,
-      padding: 20 * currentSpacing.scale,
-      marginBottom: 20 * currentSpacing.scale,
-      borderWidth: 1,
-      borderColor: currentTheme.colors.border,
-    },
-    stepImage: {
-      fontSize: 60 * currentTextSize.scale,
-      textAlign: 'center',
-      marginBottom: 16 * currentSpacing.scale,
-    },
-    stepText: {
-      fontSize: 18 * currentTextSize.scale,
-      color: currentTheme.colors.text,
-      textAlign: 'center',
-      lineHeight: 26 * currentTextSize.scale,
-      marginBottom: 20 * currentSpacing.scale,
-    },
-    stepCounter: {
-      fontSize: 14 * currentTextSize.scale,
-      color: currentTheme.colors.textSecondary,
-      textAlign: 'center',
-      marginBottom: 16 * currentSpacing.scale,
-    },
-    controlButtons: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-      marginBottom: 20 * currentSpacing.scale,
-    },
-    controlButton: {
-      backgroundColor: currentTheme.colors.primary,
-      paddingHorizontal: 20 * currentSpacing.scale,
-      paddingVertical: 12 * currentSpacing.scale,
-      borderRadius: 25 * currentSpacing.scale,
-      flex: 0.3,
-      alignItems: 'center',
-    },
-    controlButtonDisabled: {
-      backgroundColor: currentTheme.colors.textSecondary,
-    },
-    controlButtonText: {
-      color: currentTheme.colors.surface,
-      fontSize: 14 * currentTextSize.scale,
-      fontWeight: '600',
-    },
-    playButton: {
-      backgroundColor: '#4CAF50',
-      flex: 0.4,
-    },
-    resetButton: {
-      backgroundColor: '#F44336',
-      alignSelf: 'center',
-      paddingHorizontal: 24 * currentSpacing.scale,
-    },
+    bigEmoji: { fontSize: 70 },
+    contentText: { fontSize: 22, fontWeight: '700', color: '#1E293B', textAlign: 'center', lineHeight: 32, marginBottom: 32 },
+    
+    controlsRow: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', gap: 12 },
+    ctrlBtn: { flex: 1, backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#E2E8F0', paddingVertical: 16, borderRadius: 20, alignItems: 'center' },
+    ctrlBtnText: { fontSize: 16, fontWeight: '800', color: '#64748B' },
+    playBtn: { flex: 1.2, backgroundColor: '#10B981', paddingVertical: 16, borderRadius: 20, alignItems: 'center', shadowColor: '#10B981', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6 },
+    playBtnText: { fontSize: 16, fontWeight: '900', color: '#FFFFFF' }
   });
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        {onBack && (
-          <TouchableOpacity style={styles.backButton} onPress={onBack}>
-            <Text style={styles.backIcon}>←</Text>
-          </TouchableOpacity>
-        )}
-        <Text style={styles.headerTitle}>Story Time</Text>
+    <View style={styles.container}>
+      {/* Background Hero SVG */}
+      <View style={styles.waveContainer}>
+        <Svg height={450} width="100%" preserveAspectRatio="none" viewBox="0 0 1440 320">
+          <Defs>
+            <LinearGradient id="stGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <Stop offset="0%" stopColor="#4338CA" />
+              <Stop offset="50%" stopColor="#6366F1" />
+              <Stop offset="100%" stopColor="#818CF8" />
+            </LinearGradient>
+          </Defs>
+          <Path 
+            fill="url(#stGrad)" 
+            d="M0,192L48,197.3C96,203,192,213,288,224C384,235,480,245,576,218.7C672,192,768,128,864,117.3C960,107,1056,149,1152,170.7C1248,192,1344,192,1392,192L1440,192L1440,0L1392,0C1344,0,1248,0,1152,0C1056,0,960,0,864,0C768,0,672,0,576,0C480,0,384,0,288,0C192,0,96,0,48,0L0,0Z" 
+          />
+        </Svg>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.instructionText}>
-          Choose a story or create your own to help understand new situations
-        </Text>
+      <FloatingOrb size={100} color="rgba(255,255,255,0.06)" top={40} left={width - 80} delay={0} />
+      <FloatingOrb size={60} color="rgba(255,255,255,0.1)" top={150} left={20} delay={400} />
+      <FloatingOrb size={30} color="rgba(255,255,255,0.15)" top={220} left={width / 2} delay={800} />
 
-        {!currentStory ? (
-          <>
-            <View style={styles.customPromptContainer}>
-              <Text style={styles.customPromptTitle}>Create Your Own Story</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Describe the situation (e.g., 'We are going to the dentist')"
-                placeholderTextColor={currentTheme.colors.textSecondary}
-                value={customPrompt}
-                onChangeText={setCustomPrompt}
-                multiline
-              />
-              <TouchableOpacity 
-                style={styles.generateButton} 
-                onPress={handleCustomStory}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color={currentTheme.colors.surface} />
-                ) : (
-                  <Text style={styles.generateButtonText}>Generate Story</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-
-            {sampleStories.map((story) => (
-              <TouchableOpacity
-                key={story.id}
-                style={styles.storyCard}
-                onPress={() => handleStorySelect(story)}
-              >
-                <Text style={styles.storyTitle}>{story.title}</Text>
-                <Text style={styles.storyPrompt}>"{story.prompt}"</Text>
-              </TouchableOpacity>
-            ))}
-          </>
-        ) : (
-          <View style={styles.storyViewer}>
-            <Text style={styles.stepCounter}>
-              Step {currentStep + 1} of {currentStory.steps.length}
-            </Text>
-            <Text style={styles.stepImage}>
-              {currentStory.steps[currentStep].image}
-            </Text>
-            <Text style={styles.stepText}>
-              {currentStory.steps[currentStep].text}
-            </Text>
-            
-            <View style={styles.controlButtons}>
-              <TouchableOpacity
-                style={[styles.controlButton, currentStep === 0 && styles.controlButtonDisabled]}
-                onPress={previousStep}
-                disabled={currentStep === 0}
-              >
-                <Text style={styles.controlButtonText}>← Previous</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.controlButton, styles.playButton]}
-                onPress={playCurrentStep}
-              >
-                <Text style={styles.controlButtonText}>🔊 Play</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.controlButton, currentStep === currentStory.steps.length - 1 && styles.controlButtonDisabled]}
-                onPress={nextStep}
-                disabled={currentStep === currentStory.steps.length - 1}
-              >
-                <Text style={styles.controlButtonText}>Next →</Text>
-              </TouchableOpacity>
-            </View>
-            
-            <TouchableOpacity style={[styles.controlButton, styles.resetButton]} onPress={resetStory}>
-              <Text style={styles.controlButtonText}>Choose Different Story</Text>
-            </TouchableOpacity>
+      <SafeAreaView style={{ flex: 1 }}>
+        <View style={styles.headerTop}>
+          <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.8}>
+            <BackArrowIcon size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <View style={styles.headerTitles}>
+            <Text style={styles.title}>Story Time</Text>
+            <Text style={styles.subtitleText}>Visual Narrative Guides</Text>
           </View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+        </View>
+
+        <Animated.ScrollView 
+          contentContainerStyle={styles.scrollContent} 
+          showsVerticalScrollIndicator={false}
+          style={{ opacity: contentFade, transform: [{ translateY: contentSlide }] }}
+        >
+          {!currentStory ? (
+            <>
+              {/* Custom Generator */}
+              <View style={styles.generatorCard}>
+                <Text style={styles.genTitle}>Generate New Story ✨</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="E.g., We are going to the dentist today..."
+                  placeholderTextColor="#94A3B8"
+                  value={customPrompt}
+                  onChangeText={setCustomPrompt}
+                  multiline
+                />
+                <TouchCard onPress={handleCustomStory} disabled={isLoading}>
+                  <View style={styles.genBtn}>
+                    {isLoading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.genBtnText}>Create Story</Text>}
+                  </View>
+                </TouchCard>
+              </View>
+
+              <Text style={styles.sectionTitle}>Starter Stories</Text>
+              
+              {/* Sample list */}
+              {sampleStories.map((story) => (
+                <TouchCard key={story.id} onPress={() => handleStorySelect(story)}>
+                  <View style={styles.storyCard}>
+                    <View style={[styles.storyIconWrapper, { backgroundColor: story.color + '15' }]}>
+                      <Text style={styles.storyIcon}>{story.icon}</Text>
+                    </View>
+                    <View style={styles.storyInfo}>
+                      <Text style={styles.storyTitle}>{story.title}</Text>
+                      <Text style={styles.storyPrompt} numberOfLines={1}>"{story.prompt}"</Text>
+                    </View>
+                    <Text style={{color: '#CBD5E1', fontSize: 20, fontWeight: '900'}}>→</Text>
+                  </View>
+                </TouchCard>
+              ))}
+            </>
+          ) : (
+            /* Viewer */
+            <View style={styles.viewerCard}>
+              <View style={styles.progressHeader}>
+                <View style={[styles.stepBadge, { backgroundColor: currentStory.color + '15' }]}>
+                  <Text style={[styles.stepBadgeText, { color: currentStory.color }]}>
+                    Step {currentStep + 1} of {currentStory.steps.length}
+                  </Text>
+                </View>
+                <TouchableOpacity style={styles.closeBtn} onPress={resetStory}>
+                  <Text style={{color: '#64748B', fontWeight: '900'}}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={[styles.emojiBox, { borderColor: currentStory.color + '20' }]}>
+                <Text style={styles.bigEmoji}>{currentStory.steps[currentStep].image}</Text>
+              </View>
+
+              <Text style={styles.contentText}>{currentStory.steps[currentStep].text}</Text>
+
+              <View style={styles.controlsRow}>
+                <TouchCard 
+                  style={[styles.ctrlBtn, currentStep === 0 && { opacity: 0.5 }]} 
+                  onPress={previousStep} disabled={currentStep === 0}
+                >
+                  <Text style={styles.ctrlBtnText}>← Back</Text>
+                </TouchCard>
+                
+                <TouchCard style={[styles.playBtn, { backgroundColor: currentStory.color, shadowColor: currentStory.color }]} onPress={playCurrentStep}>
+                  <Text style={styles.playBtnText}>🔊 Play Audio</Text>
+                </TouchCard>
+                
+                <TouchCard 
+                  style={[styles.ctrlBtn, currentStep === currentStory.steps.length - 1 && { opacity: 0.5 }]} 
+                  onPress={nextStep} disabled={currentStep === currentStory.steps.length - 1}
+                >
+                  <Text style={[styles.ctrlBtnText, { color: '#1E293B' }]}>Next →</Text>
+                </TouchCard>
+              </View>
+            </View>
+          )}
+        </Animated.ScrollView>
+      </SafeAreaView>
+    </View>
   );
 };
 

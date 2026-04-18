@@ -9,17 +9,15 @@ import {
   Dimensions,
   TouchableWithoutFeedback,
 } from 'react-native';
-import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTTS } from '../contexts/TTSContext';
 import { useUser } from '../contexts/UserContext';
-import { DashboardIcon, InfoIcon, SettingsIcon } from './icons/ConditionIcons';
+import { InfoIcon, SettingsIcon } from './icons/ConditionIcons';
 
 const { width } = Dimensions.get('window');
 const MENU_WIDTH = width * 0.75;
 
-const SideMenu = ({ visible, onClose, onSettingsPress, onDashboardPress, onConditionsPress }) => {
-  const { currentTheme, currentTextSize, currentSpacing } = useTheme();
+const SideMenu = ({ visible, onClose, onSettingsPress, onAboutPress }) => {
   const { t } = useLanguage();
   const { speak } = useTTS();
   const { userData } = useUser();
@@ -36,34 +34,28 @@ const SideMenu = ({ visible, onClose, onSettingsPress, onDashboardPress, onCondi
     } else {
       Animated.timing(slideAnim, {
         toValue: -MENU_WIDTH,
-        duration: 200,
+        duration: 250,
         useNativeDriver: true,
       }).start();
     }
   }, [visible, slideAnim]);
 
   const handleSettingsPress = () => {
-    speak(t('openingSettings'));
+    speak('Opening Settings');
     onClose();
     setTimeout(() => onSettingsPress(), 300);
   };
 
-  const handleDashboardPress = () => {
-    speak(t('openingDashboard'));
+  const handleAboutPress = () => {
+    speak('Learn about CogniVerse');
     onClose();
-    setTimeout(() => onDashboardPress(), 300);
-  };
-
-  const handleConditionsPress = () => {
-    speak(t('learnAboutConditions'));
-    onClose();
-    setTimeout(() => onConditionsPress(), 300);
+    setTimeout(() => onAboutPress(), 300);
   };
 
   const styles = StyleSheet.create({
     overlay: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      backgroundColor: 'rgba(15, 23, 42, 0.4)', // Darker premium frost
     },
     menuContainer: {
       position: 'absolute',
@@ -71,71 +63,86 @@ const SideMenu = ({ visible, onClose, onSettingsPress, onDashboardPress, onCondi
       top: 0,
       bottom: 0,
       width: MENU_WIDTH,
-      backgroundColor: currentTheme.colors.surface,
-      shadowColor: currentTheme.colors.text,
-      shadowOffset: { width: 2, height: 0 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 16,
+      backgroundColor: '#FFFFFF',
+      shadowColor: '#000',
+      shadowOffset: { width: 10, height: 0 },
+      shadowOpacity: 0.15,
+      shadowRadius: 30,
+      elevation: 20,
+      borderTopRightRadius: 32,
+      borderBottomRightRadius: 32,
+      overflow: 'hidden',
     },
     menuHeader: {
-      backgroundColor: currentTheme.colors.primary,
-      padding: 28 * currentSpacing.scale,
-      paddingTop: 60 * currentSpacing.scale,
-      paddingBottom: 28 * currentSpacing.scale,
+      backgroundColor: '#4338CA', // Brand Indigo
+      padding: 32,
+      paddingTop: 80, // Safe area accommodation
+      paddingBottom: 40,
+      borderBottomRightRadius: 32,
+      alignItems: 'center',
     },
     headerTitle: {
-      fontSize: 24 * currentTextSize.scale,
-      fontWeight: 'bold',
-      color: currentTheme.colors.surface,
-      marginBottom: 8 * currentSpacing.scale,
+      fontSize: 28,
+      fontWeight: '900',
+      color: '#FFFFFF',
+      marginBottom: 8,
+      letterSpacing: -0.5,
     },
     headerSubtitle: {
-      fontSize: 14 * currentTextSize.scale,
-      color: currentTheme.colors.surface,
-      opacity: 0.9,
+      fontSize: 15,
+      fontWeight: '600',
+      color: 'rgba(255, 255, 255, 0.9)',
+      textAlign: 'center',
     },
     menuContent: {
       flex: 1,
-      paddingTop: 20 * currentSpacing.scale,
+      paddingTop: 30,
+      paddingHorizontal: 16,
     },
     menuItem: {
       flexDirection: 'row',
       alignItems: 'center',
-      padding: 20 * currentSpacing.scale,
-      paddingLeft: 24 * currentSpacing.scale,
-      marginHorizontal: 12 * currentSpacing.scale,
-      marginVertical: 6 * currentSpacing.scale,
-      borderRadius: 12 * currentSpacing.scale,
-      backgroundColor: 'transparent',
+      backgroundColor: '#F8FAFC',
+      padding: 20,
+      marginBottom: 16,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: '#F1F5F9',
+      shadowColor: '#0F172A',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.03,
+      shadowRadius: 8,
+      elevation: 2,
     },
-    menuIcon: {
-      fontSize: 28 * currentTextSize.scale,
-      marginRight: 16 * currentSpacing.scale,
-      width: 40 * currentSpacing.scale,
-      textAlign: 'center',
+    menuIconBox: {
+      width: 48,
+      height: 48,
+      borderRadius: 14,
+      backgroundColor: '#EEF2FF',
       justifyContent: 'center',
       alignItems: 'center',
+      marginRight: 16,
     },
     menuItemText: {
-      fontSize: 18 * currentTextSize.scale,
-      color: currentTheme.colors.text,
-      fontWeight: '500',
+      fontSize: 18,
+      fontWeight: '800',
+      color: '#1E293B',
+      marginBottom: 4,
     },
     menuItemDescription: {
-      fontSize: 12 * currentTextSize.scale,
-      color: currentTheme.colors.textSecondary,
-      marginTop: 4 * currentSpacing.scale,
+      fontSize: 13,
+      fontWeight: '600',
+      color: '#64748B',
     },
     menuFooter: {
-      padding: 24 * currentSpacing.scale,
-      borderTopWidth: 1,
-      borderTopColor: currentTheme.colors.border,
+      padding: 24,
+      alignItems: 'center',
     },
     appVersion: {
-      fontSize: 12 * currentTextSize.scale,
-      color: currentTheme.colors.textSecondary,
-      textAlign: 'center',
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#94A3B8',
+      letterSpacing: 0.5,
     },
   });
   
@@ -144,86 +151,47 @@ const SideMenu = ({ visible, onClose, onSettingsPress, onDashboardPress, onCondi
   }
 
   return (
-    <Modal
-      visible={true}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={onClose}
-    >
+    <Modal visible={true} transparent={true} animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <TouchableWithoutFeedback onPress={onClose}>
           <View style={{ flex: 1 }} />
         </TouchableWithoutFeedback>
         
-        <Animated.View
-          style={[
-            styles.menuContainer,
-            { transform: [{ translateX: slideAnim }] },
-          ]}
-        >
-              {/* Header */}
-              <View style={styles.menuHeader}>
-                <Text style={styles.headerTitle}>{t('appName')}</Text>
-                <Text style={styles.headerSubtitle}>
-                  {userData?.name ? `${t('hiUser')} ${userData.name}!` : t('appSubtitle')}
-                </Text>
+        <Animated.View style={[styles.menuContainer, { transform: [{ translateX: slideAnim }] }]}>
+          {/* Deep Indigo Header */}
+          <View style={styles.menuHeader}>
+            <Text style={styles.headerTitle}>{t('appName')}</Text>
+            <Text style={styles.headerSubtitle}>
+              {userData?.name ? `Welcome, ${userData.name}!` : 'Nurturing Cognitive Growth'}
+            </Text>
+          </View>
+
+          {/* Core Settings Routing */}
+          <View style={styles.menuContent}>
+            <TouchableOpacity style={styles.menuItem} onPress={handleSettingsPress} activeOpacity={0.8}>
+              <View style={styles.menuIconBox}>
+                <SettingsIcon size={24} color="#4338CA" />
               </View>
-
-              {/* Menu Items */}
-              <View style={styles.menuContent}>
-                <TouchableOpacity
-                  style={styles.menuItem}
-                  onPress={handleDashboardPress}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.menuIcon}>
-                    <DashboardIcon size={28 * currentTextSize.scale} color={currentTheme.colors.primary} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.menuItemText}>{t('myProgress')}</Text>
-                    <Text style={styles.menuItemDescription}>
-                      {t('viewProgressAndAchievements')}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.menuItem}
-                  onPress={handleConditionsPress}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.menuIcon}>
-                    <InfoIcon size={28 * currentTextSize.scale} color={currentTheme.colors.primary} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.menuItemText}>{t('conditionsGuide.title')}</Text>
-                    <Text style={styles.menuItemDescription}>
-                      {t('learnAboutConditions')}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.menuItem}
-                  onPress={handleSettingsPress}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.menuIcon}>
-                    <SettingsIcon size={28 * currentTextSize.scale} color={currentTheme.colors.primary} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.menuItemText}>{t('settings')}</Text>
-                    <Text style={styles.menuItemDescription}>
-                      {t('customizeAppExperience')}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.menuItemText}>{t('settings')}</Text>
+                <Text style={styles.menuItemDescription}>Device & App Preferences</Text>
               </View>
+            </TouchableOpacity>
 
-              {/* Footer */}
-              <View style={styles.menuFooter}>
-                <Text style={styles.appVersion}>CogniVerse v1.0.0</Text>
+            <TouchableOpacity style={styles.menuItem} onPress={handleAboutPress} activeOpacity={0.8}>
+              <View style={styles.menuIconBox}>
+                <InfoIcon size={24} color="#4338CA" />
               </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.menuItemText}>About CogniVerse</Text>
+                <Text style={styles.menuItemDescription}>Our mission & platform details</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.menuFooter}>
+            <Text style={styles.appVersion}>V1.0.0 — PREMIUM EDT.</Text>
+          </View>
         </Animated.View>
       </View>
     </Modal>
@@ -231,4 +199,3 @@ const SideMenu = ({ visible, onClose, onSettingsPress, onDashboardPress, onCondi
 };
 
 export default SideMenu;
-

@@ -9,487 +9,382 @@ import {
   Animated,
   Dimensions,
 } from 'react-native';
-import { useTheme } from '../contexts/ThemeContext';
-import { useLanguage } from '../contexts/LanguageContext';
+import Svg, { Defs, LinearGradient, Stop, Path } from 'react-native-svg';
 import { useTTS } from '../contexts/TTSContext';
-import HelpModal from './HelpModal';
-import { BackArrowIcon, PlayIcon, HelpIcon } from '../components/icons/ConditionIcons';
-import {
-  EatingIcon,
-  DrinkingIcon,
-  BathingIcon,
-  BrushingTeethIcon,
-  SleepingIcon,
-  DressingIcon,
-  PlayingIcon,
-  ReadingIcon,
-  WalkingIcon,
-  SittingIcon,
-  HelpSOSIcon,
-  ToiletIcon,
-  HappyIcon,
-  SadIcon,
-  TiredIcon,
-  HungryIcon,
-  ThirstyIcon,
-  HotIcon,
-  ColdIcon,
-  SickIcon,
-  WashingHandsIcon,
-  CookingIcon,
-  CleaningIcon,
-  WatchingTVIcon,
-} from '../components/icons/ActivityIcons';
+import { useUser } from '../contexts/UserContext';
+import { BackArrowIcon } from '../components/icons/ConditionIcons';
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - 60) / 2;
 
-// --- Action Card Component ---
-const ActionCard = ({ action, onPress, onSpeak, theme, textSize, spacing, index, t }) => {
-  const scaleAnim = useRef(new Animated.Value(0.9)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
+// Floating orb for visual ambience
+const FloatingOrb = ({ size, color, top, left, delay = 0 }) => {
+  const floatAnim = useRef(new Animated.Value(0)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    Animated.parallel([
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        delay: index * 50,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        delay: index * 50,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    Animated.timing(opacityAnim, { toValue: 1, duration: 1000, delay, useNativeDriver: true }).start();
+    Animated.loop(Animated.sequence([
+      Animated.timing(floatAnim, { toValue: 1, duration: 3000 + delay, useNativeDriver: true }),
+      Animated.timing(floatAnim, { toValue: 0, duration: 3000 + delay, useNativeDriver: true }),
+    ])).start();
   }, []);
-
-  const cardStyles = StyleSheet.create({
-    card: {
-      width: CARD_WIDTH,
-      backgroundColor: theme.colors.surface,
-      borderRadius: 20 * spacing.scale,
-      margin: 8 * spacing.scale,
-      padding: 16 * spacing.scale,
-      borderWidth: 2,
-      borderColor: action.color || theme.colors.border,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.15,
-      shadowRadius: 16,
-      elevation: 10,
-      overflow: 'hidden',
-    },
-    imageContainer: {
-      width: '100%',
-      height: 120 * spacing.scale,
-      backgroundColor: action.bgColor || '#F3F4F6',
-      borderRadius: 16 * spacing.scale,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: 12 * spacing.scale,
-      overflow: 'hidden',
-    },
-    emoji: {
-      fontSize: 64 * textSize.scale,
-    },
-    label: {
-      fontSize: 18 * textSize.scale,
-      fontWeight: '700',
-      color: theme.colors.text,
-      textAlign: 'center',
-      marginBottom: 12 * spacing.scale,
-      letterSpacing: 0.3,
-    },
-    soundButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: action.color || theme.colors.primary,
-      paddingVertical: 10 * spacing.scale,
-      paddingHorizontal: 16 * spacing.scale,
-      borderRadius: 12 * spacing.scale,
-      shadowColor: action.color || theme.colors.primary,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 5,
-    },
-    soundButtonText: {
-      color: '#FFFFFF',
-      fontSize: 14 * textSize.scale,
-      fontWeight: '600',
-      marginLeft: 8 * spacing.scale,
-    },
-  });
-
+  const translateY = floatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -12] });
   return (
-    <Animated.View style={{ opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}>
-      <TouchableOpacity 
-        style={cardStyles.card} 
-        onPress={() => onPress(action)}
-        activeOpacity={0.85}
-      >
-        <View style={cardStyles.imageContainer}>
-          {action.IconComponent ? (
-            <action.IconComponent size={72 * spacing.scale} color={action.color} />
-          ) : (
-            <Text style={cardStyles.emoji}>{action.emoji}</Text>
-          )}
-        </View>
-        <Text style={cardStyles.label}>{t(action.labelKey)}</Text>
-        <TouchableOpacity 
-          style={cardStyles.soundButton} 
-          onPress={(e) => {
-            e.stopPropagation();
-            onSpeak(action.labelKey);
-          }}
-          activeOpacity={0.8}
-        >
-          <PlayIcon size={20} color="#FFFFFF" />
-          <Text style={cardStyles.soundButtonText}>{t('speak')}</Text>
-        </TouchableOpacity>
-      </TouchableOpacity>
-    </Animated.View>
+    <Animated.View style={{
+      position: 'absolute', top, left, width: size, height: size,
+      borderRadius: size / 2, backgroundColor: color,
+      opacity: opacityAnim, transform: [{ translateY }],
+    }} />
   );
 };
 
-// --- Main Communication Board Screen ---
+// Core communication categories
+const CATEGORIES = [
+  { id: 'needs', label: 'I Need', emoji: '🙋', color: '#EF4444' },
+  { id: 'feelings', label: 'I Feel', emoji: '💛', color: '#F59E0B' },
+  { id: 'actions', label: 'I Want To', emoji: '⭐', color: '#6366F1' },
+  { id: 'people', label: 'People', emoji: '👨‍👩‍👧', color: '#10B981' },
+  { id: 'responses', label: 'Responses', emoji: '💬', color: '#06B6D4' },
+];
+
+const CARDS = {
+  needs: [
+    { emoji: '🍽️', label: 'Eat', speech: 'I want to eat' },
+    { emoji: '🥤', label: 'Drink', speech: 'I want a drink' },
+    { emoji: '🚽', label: 'Toilet', speech: 'I need the toilet' },
+    { emoji: '🆘', label: 'Help', speech: 'I need help' },
+    { emoji: '😴', label: 'Rest', speech: 'I need to rest' },
+    { emoji: '🤗', label: 'Hug', speech: 'I want a hug' },
+    { emoji: '🧸', label: 'Toy', speech: 'I want my toy' },
+    { emoji: '🏠', label: 'Home', speech: 'I want to go home' },
+  ],
+  feelings: [
+    { emoji: '😊', label: 'Happy', speech: 'I feel happy' },
+    { emoji: '😢', label: 'Sad', speech: 'I feel sad' },
+    { emoji: '😠', label: 'Angry', speech: 'I feel angry' },
+    { emoji: '😨', label: 'Scared', speech: 'I feel scared' },
+    { emoji: '🤒', label: 'Sick', speech: 'I feel sick' },
+    { emoji: '😫', label: 'Tired', speech: 'I feel tired' },
+    { emoji: '😊', label: 'Good', speech: 'I feel good' },
+    { emoji: '🥰', label: 'Loved', speech: 'I feel loved' },
+  ],
+  actions: [
+    { emoji: '🎮', label: 'Play', speech: 'I want to play' },
+    { emoji: '📚', label: 'Read', speech: 'I want to read' },
+    { emoji: '🚶', label: 'Walk', speech: 'I want to go for a walk' },
+    { emoji: '🎵', label: 'Music', speech: 'I want to listen to music' },
+    { emoji: '📺', label: 'Watch', speech: 'I want to watch something' },
+    { emoji: '✏️', label: 'Draw', speech: 'I want to draw' },
+  ],
+  people: [
+    { emoji: '👩', label: 'Mom', speech: 'I want mom' },
+    { emoji: '👨', label: 'Dad', speech: 'I want dad' },
+    { emoji: '👫', label: 'Friend', speech: 'I want my friend' },
+    { emoji: '👩‍🏫', label: 'Teacher', speech: 'I want my teacher' },
+    { emoji: '👨‍👩‍👧', label: 'Family', speech: 'I want my family' },
+    { emoji: '🧑‍⚕️', label: 'Doctor', speech: 'I want the doctor' },
+  ],
+  responses: [
+    { emoji: '✅', label: 'Yes', speech: 'Yes' },
+    { emoji: '❌', label: 'No', speech: 'No' },
+    { emoji: '🙏', label: 'Please', speech: 'Please' },
+    { emoji: '😊', label: 'Thank You', speech: 'Thank you' },
+    { emoji: '👋', label: 'Hello', speech: 'Hello' },
+    { emoji: '🤝', label: 'Goodbye', speech: 'Goodbye' },
+    { emoji: '😞', label: 'Sorry', speech: 'I am sorry' },
+    { emoji: '🔄', label: 'Again', speech: 'Again please' },
+  ],
+};
+
 const CommunicationBoardScreen = ({ onBack }) => {
-  const { currentTheme, currentTextSize, currentSpacing } = useTheme();
-  const { t } = useLanguage();
   const { speak } = useTTS();
-  const [showHelp, setShowHelp] = useState(false);
+  const { logActivity } = useUser();
 
-  // Daily activity actions with mix of SVG icons and emojis
-  const dailyActions = [
-    { id: '1', labelKey: 'actions.eating', emoji: '🍽️', color: '#F59E0B', bgColor: '#FEF3C7', category: 'daily' },
-    { id: '2', labelKey: 'actions.drinking', emoji: '🥤', color: '#3B82F6', bgColor: '#DBEAFE', category: 'daily' },
-    { id: '3', labelKey: 'actions.bathing', emoji: '🛁', color: '#06B6D4', bgColor: '#CFFAFE', category: 'daily' },
-    { id: '4', labelKey: 'actions.brushingTeeth', emoji: '🪥', color: '#10B981', bgColor: '#D1FAE5', category: 'daily' },
-    { id: '5', labelKey: 'actions.sleeping', emoji: '😴', color: '#8B5CF6', bgColor: '#EDE9FE', category: 'daily' },
-    { id: '6', labelKey: 'actions.gettingDressed', emoji: '👕', color: '#EC4899', bgColor: '#FCE7F3', category: 'daily' },
-    { id: '7', labelKey: 'actions.playing', emoji: '🎮', color: '#F59E0B', bgColor: '#FEF3C7', category: 'activity' },
-    { id: '8', labelKey: 'actions.reading', emoji: '📚', color: '#6366F1', bgColor: '#E0E7FF', category: 'activity' },
-    { id: '9', labelKey: 'actions.walking', emoji: '🚶', color: '#10B981', bgColor: '#D1FAE5', category: 'activity' },
-    { id: '10', labelKey: 'actions.sitting', emoji: '🪑', color: '#8B5CF6', bgColor: '#EDE9FE', category: 'activity' },
-    { id: '11', labelKey: 'actions.help', emoji: '🆘', color: '#EF4444', bgColor: '#FEE2E2', category: 'need' },
-    { id: '12', labelKey: 'actions.toilet', emoji: '🚽', color: '#06B6D4', bgColor: '#CFFAFE', category: 'need' },
-    { id: '13', labelKey: 'actions.happy', IconComponent: HappyIcon, color: '#FBBF24', bgColor: '#FEF3C7', category: 'emotion' },
-    { id: '14', labelKey: 'actions.sad', IconComponent: SadIcon, color: '#3B82F6', bgColor: '#DBEAFE', category: 'emotion' },
-    { id: '15', labelKey: 'actions.tired', IconComponent: TiredIcon, color: '#8B5CF6', bgColor: '#EDE9FE', category: 'emotion' },
-    { id: '16', labelKey: 'actions.hungry', IconComponent: HungryIcon, color: '#F59E0B', bgColor: '#FEF3C7', category: 'need' },
-    { id: '17', labelKey: 'actions.thirsty', IconComponent: ThirstyIcon, color: '#3B82F6', bgColor: '#DBEAFE', category: 'need' },
-    { id: '18', labelKey: 'actions.hot', IconComponent: HotIcon, color: '#EF4444', bgColor: '#FEE2E2', category: 'feeling' },
-    { id: '19', labelKey: 'actions.cold', IconComponent: ColdIcon, color: '#06B6D4', bgColor: '#CFFAFE', category: 'feeling' },
-    { id: '20', labelKey: 'actions.sick', IconComponent: SickIcon, color: '#EF4444', bgColor: '#FEE2E2', category: 'feeling' },
-    { id: '21', labelKey: 'actions.washingHands', emoji: '🧼', color: '#10B981', bgColor: '#D1FAE5', category: 'daily' },
-    { id: '22', labelKey: 'actions.cooking', emoji: '🍳', color: '#F59E0B', bgColor: '#FEF3C7', category: 'activity' },
-    { id: '23', labelKey: 'actions.cleaning', emoji: '🧹', color: '#06B6D4', bgColor: '#CFFAFE', category: 'activity' },
-    { id: '24', labelKey: 'actions.watchingTV', emoji: '📺', color: '#8B5CF6', bgColor: '#EDE9FE', category: 'activity' },
-  ];
-  
-  const [sentence, setSentence] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState('needs');
+  const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Function to add action to sentence strip
-  const handleActionPress = (action) => {
-    const label = t(action.labelKey);
-    setSentence([...sentence, label]);
-    speak(label);
+  const headerFade = useRef(new Animated.Value(0)).current;
+  const cardScale = useRef(new Animated.Value(0.85)).current;
+  const cardOpacity = useRef(new Animated.Value(0)).current;
+
+  const currentCards = CARDS[selectedCategory] || [];
+  const card = currentCards[currentIndex];
+  const catObj = CATEGORIES.find(c => c.id === selectedCategory);
+  const accentColor = catObj?.color || '#6366F1';
+
+  useEffect(() => {
+    Animated.timing(headerFade, { toValue: 1, duration: 600, useNativeDriver: true }).start();
+    animateCard();
+  }, []);
+
+  const animateCard = () => {
+    cardScale.setValue(0.85);
+    cardOpacity.setValue(0);
+    Animated.parallel([
+      Animated.spring(cardScale, { toValue: 1, tension: 50, friction: 7, useNativeDriver: true }),
+      Animated.timing(cardOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+    ]).start();
   };
-  
-  // Function to speak action
-  const handleSpeak = (labelKey) => {
-    speak(t(labelKey));
+
+  const handleCategoryChange = (catId) => {
+    setSelectedCategory(catId);
+    setCurrentIndex(0);
+    // Animate the new card in
+    cardScale.setValue(0.85);
+    cardOpacity.setValue(0);
+    Animated.parallel([
+      Animated.spring(cardScale, { toValue: 1, tension: 50, friction: 7, useNativeDriver: true }),
+      Animated.timing(cardOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+    ]).start();
   };
-  
-  // Speak full sentence
-  const handleSpeakSentence = () => {
-    if (sentence.length > 0) {
-      speak(sentence.join(' '));
+
+  const handleNext = () => {
+    const cards = CARDS[selectedCategory];
+    const nextIdx = currentIndex < cards.length - 1 ? currentIndex + 1 : 0;
+    Animated.parallel([
+      Animated.timing(cardScale, { toValue: 0.85, duration: 180, useNativeDriver: true }),
+      Animated.timing(cardOpacity, { toValue: 0, duration: 180, useNativeDriver: true }),
+    ]).start(() => {
+      setCurrentIndex(nextIdx);
+      animateCard();
+    });
+  };
+
+  const handlePrev = () => {
+    const cards = CARDS[selectedCategory];
+    const prevIdx = currentIndex > 0 ? currentIndex - 1 : cards.length - 1;
+    Animated.parallel([
+      Animated.timing(cardScale, { toValue: 0.85, duration: 180, useNativeDriver: true }),
+      Animated.timing(cardOpacity, { toValue: 0, duration: 180, useNativeDriver: true }),
+    ]).start(() => {
+      setCurrentIndex(prevIdx);
+      animateCard();
+    });
+  };
+
+  const handleSpeak = () => {
+    if (card) {
+      speak(card.speech);
+      logActivity('Communication Board', 1);
     }
   };
-  
-  // Filter actions by category
-  const filteredActions = selectedCategory === 'all' 
-    ? dailyActions 
-    : dailyActions.filter(action => action.category === selectedCategory);
-  
-  const categories = [
-    { id: 'all', labelKey: 'categories.all', color: '#6366F1' },
-    { id: 'daily', labelKey: 'categories.daily', color: '#10B981' },
-    { id: 'activity', labelKey: 'categories.activity', color: '#F59E0B' },
-    { id: 'need', labelKey: 'categories.need', color: '#EF4444' },
-    { id: 'emotion', labelKey: 'categories.emotion', color: '#8B5CF6' },
-    { id: 'feeling', labelKey: 'categories.feeling', color: '#06B6D4' },
-  ];
 
-  const dynamicStyles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: currentTheme.colors.background,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: 15 * currentSpacing.scale,
-      backgroundColor: currentTheme.colors.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: currentTheme.colors.border,
-    },
-    backButton: {
-      backgroundColor: currentTheme.colors.primary,
-      borderRadius: 25 * currentSpacing.scale,
-      width: 50 * currentSpacing.scale,
-      height: 50 * currentSpacing.scale,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginRight: 16 * currentSpacing.scale,
-      shadowColor: currentTheme.colors.primary,
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.3,
-      shadowRadius: 6,
-      elevation: 5,
-    },
-    headerTitle: {
-      fontSize: 24 * currentTextSize.scale,
-      fontWeight: '700',
-      color: currentTheme.colors.text,
-      flex: 1,
-    },
-    sentenceStrip: {
-      backgroundColor: currentTheme.colors.surface,
-      margin: 12 * currentSpacing.scale,
-      borderRadius: 16 * currentSpacing.scale,
-      borderWidth: 2,
-      borderColor: currentTheme.colors.primary,
-      padding: 16 * currentSpacing.scale,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 12,
-      elevation: 6,
-    },
-    sentenceHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 8 * currentSpacing.scale,
-    },
-    sentenceTitle: {
-      fontSize: 14 * currentTextSize.scale,
-      fontWeight: '600',
-      color: currentTheme.colors.textSecondary,
-      textTransform: 'uppercase',
-      letterSpacing: 1,
-    },
-    sentenceContent: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      minHeight: 50 * currentSpacing.scale,
-    },
-    sentenceText: {
-      fontSize: 20 * currentTextSize.scale,
-      color: currentTheme.colors.text,
-      flex: 1,
-      fontWeight: '500',
-    },
-    sentenceActions: {
-      flexDirection: 'row',
-      gap: 8 * currentSpacing.scale,
-    },
-    speakButton: {
-      backgroundColor: currentTheme.colors.primary,
-      paddingHorizontal: 16 * currentSpacing.scale,
-      paddingVertical: 10 * currentSpacing.scale,
-      borderRadius: 12 * currentSpacing.scale,
-      flexDirection: 'row',
-      alignItems: 'center',
-      shadowColor: currentTheme.colors.primary,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.3,
-      shadowRadius: 4,
-      elevation: 3,
-    },
-    speakButtonText: {
-      color: '#FFFFFF',
-      fontSize: 14 * currentTextSize.scale,
-      fontWeight: '600',
-      marginLeft: 6 * currentSpacing.scale,
-    },
-    clearButton: {
-      backgroundColor: '#EF4444',
-      paddingHorizontal: 16 * currentSpacing.scale,
-      paddingVertical: 10 * currentSpacing.scale,
-      borderRadius: 12 * currentSpacing.scale,
-      shadowColor: '#EF4444',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.3,
-      shadowRadius: 4,
-      elevation: 3,
-    },
-    clearButtonText: {
-      color: '#FFFFFF',
-      fontSize: 14 * currentTextSize.scale,
-      fontWeight: '600',
-    },
-    categoryContainer: {
-      paddingHorizontal: 12 * currentSpacing.scale,
-      paddingVertical: 12 * currentSpacing.scale,
-    },
-    categoryScroll: {
-      flexDirection: 'row',
-    },
-    categoryButton: {
-      paddingHorizontal: 20 * currentSpacing.scale,
-      paddingVertical: 10 * currentSpacing.scale,
-      borderRadius: 20 * currentSpacing.scale,
-      marginRight: 10 * currentSpacing.scale,
-      borderWidth: 2,
-      borderColor: 'transparent',
-    },
-    categoryButtonActive: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.2,
-      shadowRadius: 4,
-      elevation: 4,
-    },
-    categoryButtonText: {
-      fontSize: 14 * currentTextSize.scale,
-      fontWeight: '600',
-      color: '#FFFFFF',
-    },
-    gridContainer: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'space-between',
-      padding: 12 * currentSpacing.scale,
-      paddingBottom: 100 * currentSpacing.scale,
-    },
-    helpButton: {
-      position: 'absolute',
-      bottom: 30 * currentSpacing.scale,
-      right: 30 * currentSpacing.scale,
-      backgroundColor: currentTheme.colors.secondary,
-      borderRadius: 32 * currentSpacing.scale,
-      width: 68 * currentSpacing.scale,
-      height: 68 * currentSpacing.scale,
-      justifyContent: 'center',
-      alignItems: 'center',
-      shadowColor: currentTheme.colors.secondary,
-      shadowOffset: { width: 0, height: 10 },
-      shadowOpacity: 0.5,
-      shadowRadius: 16,
-      elevation: 12,
-    },
-  });
+  if (!card) return null;
+
+  const progress = ((currentIndex + 1) / currentCards.length) * 100;
 
   return (
-    <SafeAreaView style={dynamicStyles.container}>
-      {/* Header */}
-      <View style={dynamicStyles.header}>
-        {onBack && (
-          <TouchableOpacity 
-            style={dynamicStyles.backButton} 
-            onPress={onBack}
-            activeOpacity={0.7}
-          >
-            <BackArrowIcon size={24 * currentTextSize.scale} color={currentTheme.colors.surface} />
+    <View style={styles.container}>
+      {/* Background */}
+      <View style={styles.waveContainer}>
+        <Svg height={520} width="100%" preserveAspectRatio="none" viewBox="0 0 1440 320">
+          <Defs>
+            <LinearGradient id="cbGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <Stop offset="0%" stopColor="#1E1B4B" />
+              <Stop offset="40%" stopColor={accentColor + 'CC'} />
+              <Stop offset="100%" stopColor={accentColor} />
+            </LinearGradient>
+          </Defs>
+          <Path fill="url(#cbGrad)" d="M0,294L48,272.7C96,251,192,209,288,208.7C384,209,480,251,576,262C672,273,768,251,864,224.7C960,198,1056,166,1152,160.7C1248,155,1344,177,1392,187.3L1440,198L1440,0L1392,0C1344,0,1248,0,1152,0C1056,0,960,0,864,0C768,0,672,0,576,0C480,0,384,0,288,0C192,0,96,0,48,0L0,0Z" />
+        </Svg>
+      </View>
+
+      <FloatingOrb size={70} color={accentColor + '18'} top={60} left={width - 90} delay={0} />
+      <FloatingOrb size={45} color={accentColor + '20'} top={120} left={20} delay={300} />
+
+      <SafeAreaView style={{ flex: 1 }}>
+        {/* Header */}
+        <Animated.View style={[styles.headerTop, { opacity: headerFade }]}>
+          <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.8}>
+            <BackArrowIcon size={22} color={accentColor} />
           </TouchableOpacity>
-        )}
-        <Text style={dynamicStyles.headerTitle}>{t('myVoice')}</Text>
-      </View>
+          <View style={styles.headerTitles}>
+            <Text style={styles.title}>My Voice</Text>
+            <Text style={styles.subtitleText}>{catObj?.label} · {currentIndex + 1} of {currentCards.length}</Text>
+          </View>
+        </Animated.View>
 
-      {/* Sentence Strip */}
-      <View style={dynamicStyles.sentenceStrip}>
-        <View style={dynamicStyles.sentenceHeader}>
-          <Text style={dynamicStyles.sentenceTitle}>{t('myMessage')}</Text>
-        </View>
-        <View style={dynamicStyles.sentenceContent}>
-          <Text style={dynamicStyles.sentenceText}>
-            {sentence.length > 0 ? sentence.join(' ') : t('tapActionsBelow')}
-          </Text>
-          {sentence.length > 0 && (
-            <View style={dynamicStyles.sentenceActions}>
-              <TouchableOpacity 
-                onPress={handleSpeakSentence} 
-                style={dynamicStyles.speakButton}
-                activeOpacity={0.8}
-              >
-                <PlayIcon size={18} color="#FFFFFF" />
-                <Text style={dynamicStyles.speakButtonText}>{t('speak')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                onPress={() => setSentence([])} 
-                style={dynamicStyles.clearButton}
-                activeOpacity={0.8}
-              >
-                <Text style={dynamicStyles.clearButtonText}>{t('clear')}</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      </View>
-
-      {/* Category Filter */}
-      <View style={dynamicStyles.categoryContainer}>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={dynamicStyles.categoryScroll}
-        >
-          {categories.map((category) => (
-            <TouchableOpacity
-              key={category.id}
+        {/* Category tabs */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}
+          contentContainerStyle={styles.categoryContent}>
+          {CATEGORIES.map(cat => (
+            <TouchableOpacity key={cat.id}
               style={[
-                dynamicStyles.categoryButton,
-                { backgroundColor: category.color },
-                selectedCategory === category.id && dynamicStyles.categoryButtonActive,
-                selectedCategory === category.id && { borderColor: category.color }
+                styles.categoryTab,
+                selectedCategory === cat.id && { backgroundColor: cat.color, borderColor: cat.color },
               ]}
-              onPress={() => setSelectedCategory(category.id)}
-              activeOpacity={0.8}
+              onPress={() => handleCategoryChange(cat.id)} activeOpacity={0.85}
             >
-              <Text style={dynamicStyles.categoryButtonText}>{t(category.labelKey)}</Text>
+              <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
+              <Text style={[
+                styles.categoryLabel,
+                selectedCategory === cat.id && { color: '#FFFFFF' },
+              ]}>{cat.label}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
-      </View>
 
-      {/* Actions Grid */}
-      <ScrollView contentContainerStyle={dynamicStyles.gridContainer}>
-        {filteredActions.map((action, index) => (
-          <ActionCard 
-            key={action.id} 
-            action={action} 
-            onPress={handleActionPress}
-            onSpeak={handleSpeak}
-            theme={currentTheme}
-            textSize={currentTextSize}
-            spacing={currentSpacing}
-            index={index}
-            t={t}
-          />
-        ))}
-      </ScrollView>
+        {/* Progress bar */}
+        <View style={styles.progressOuter}>
+          <View style={[styles.progressInner, { width: `${progress}%`, backgroundColor: accentColor }]} />
+        </View>
 
-      <TouchableOpacity 
-        style={dynamicStyles.helpButton} 
-        onPress={() => setShowHelp(true)}
-        activeOpacity={0.8}
-      >
-        <HelpIcon size={36 * currentTextSize.scale} color="#FFFFFF" />
-      </TouchableOpacity>
+        {/* Main Card — one at a time */}
+        <View style={styles.cardArea}>
+          <Animated.View style={[styles.bigCard, {
+            opacity: cardOpacity,
+            transform: [{ scale: cardScale }],
+            shadowColor: accentColor,
+          }]}>
+            {/* Big emoji */}
+            <View style={[styles.emojiCircle, { backgroundColor: accentColor + '12' }]}>
+              <Text style={styles.bigEmoji}>{card.emoji}</Text>
+            </View>
 
-      <HelpModal visible={showHelp} onClose={() => setShowHelp(false)} context="communicationBoard" />
-    </SafeAreaView>
+            {/* Label */}
+            <Text style={styles.cardLabel}>{card.label}</Text>
+
+            {/* Speech preview */}
+            <View style={[styles.speechBadge, { backgroundColor: accentColor + '10' }]}>
+              <Text style={[styles.speechText, { color: accentColor }]}>"{card.speech}"</Text>
+            </View>
+
+            {/* Voice button */}
+            <TouchableOpacity
+              style={[styles.voiceButton, { backgroundColor: accentColor }]}
+              onPress={handleSpeak}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.voiceButtonText}>🔊  Speak</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+
+        {/* Navigation */}
+        <View style={styles.navRow}>
+          <TouchableOpacity style={styles.navBtn} onPress={handlePrev} activeOpacity={0.85}>
+            <Text style={styles.navBtnText}>← Back</Text>
+          </TouchableOpacity>
+
+          {/* Dot indicators */}
+          <View style={styles.dots}>
+            {currentCards.map((_, i) => (
+              <View key={i} style={[
+                styles.dot,
+                i === currentIndex && { backgroundColor: accentColor, width: 20 },
+              ]} />
+            ))}
+          </View>
+
+          <TouchableOpacity style={[styles.navBtn, styles.nextBtn, { backgroundColor: accentColor }]}
+            onPress={handleNext} activeOpacity={0.85}>
+            <Text style={[styles.navBtnText, { color: '#FFFFFF' }]}>
+              {currentIndex < currentCards.length - 1 ? 'Next →' : 'Start Over ↻'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  waveContainer: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 0 },
+  headerTop: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 24, marginTop: 16, zIndex: 10,
+  },
+  backButton: {
+    backgroundColor: 'rgba(255,255,255,0.95)', borderRadius: 20,
+    width: 44, height: 44, justifyContent: 'center', alignItems: 'center',
+    shadowColor: '#1E1B4B', shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15, shadowRadius: 12, elevation: 8,
+  },
+  headerTitles: { flex: 1, alignItems: 'center', marginRight: 44 },
+  title: {
+    fontSize: 24, fontWeight: '900', color: '#FFFFFF', letterSpacing: 0.3,
+    textShadowColor: 'rgba(0,0,0,0.25)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 8,
+  },
+  subtitleText: {
+    fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: '600',
+    marginTop: 3, letterSpacing: 0.8, textTransform: 'uppercase',
+  },
+
+  // Categories
+  categoryScroll: { maxHeight: 56, marginTop: 14 },
+  categoryContent: { paddingHorizontal: 16 },
+  categoryTab: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#FFFFFF', borderRadius: 28, paddingHorizontal: 16,
+    paddingVertical: 10, marginHorizontal: 5,
+    borderWidth: 2, borderColor: '#E2E8F0',
+    shadowColor: '#0F172A', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+  },
+  categoryEmoji: { fontSize: 18, marginRight: 6 },
+  categoryLabel: { fontSize: 13, fontWeight: '700', color: '#334155' },
+
+  // Progress
+  progressOuter: {
+    height: 5, backgroundColor: 'rgba(255,255,255,0.2)',
+    marginHorizontal: 24, marginTop: 14, borderRadius: 3, overflow: 'hidden',
+  },
+  progressInner: { height: '100%', borderRadius: 3 },
+
+  // Card area
+  cardArea: {
+    flex: 1, justifyContent: 'center', alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  bigCard: {
+    backgroundColor: '#FFFFFF', borderRadius: 36, padding: 36,
+    alignItems: 'center', width: '100%',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.15, shadowRadius: 30, elevation: 16,
+  },
+  emojiCircle: {
+    width: 140, height: 140, borderRadius: 70,
+    justifyContent: 'center', alignItems: 'center', marginBottom: 20,
+  },
+  bigEmoji: { fontSize: 80 },
+  cardLabel: {
+    fontSize: 32, fontWeight: '900', color: '#1E293B',
+    letterSpacing: -0.5, marginBottom: 10, textAlign: 'center',
+  },
+  speechBadge: {
+    borderRadius: 16, paddingHorizontal: 20, paddingVertical: 10,
+    marginBottom: 24,
+  },
+  speechText: { fontSize: 15, fontWeight: '700', textAlign: 'center', fontStyle: 'italic' },
+  voiceButton: {
+    borderRadius: 22, paddingHorizontal: 40, paddingVertical: 16,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25, shadowRadius: 14, elevation: 8,
+  },
+  voiceButtonText: { color: '#FFFFFF', fontSize: 19, fontWeight: '800' },
+
+  // Navigation
+  navRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 24, paddingBottom: 30, paddingTop: 16,
+  },
+  navBtn: {
+    backgroundColor: '#FFFFFF', borderRadius: 18,
+    paddingHorizontal: 22, paddingVertical: 14,
+    shadowColor: '#0F172A', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
+  },
+  nextBtn: {
+    shadowOpacity: 0.2, shadowRadius: 12, elevation: 6,
+  },
+  navBtnText: { fontSize: 15, fontWeight: '800', color: '#334155' },
+
+  // Dots
+  dots: { flexDirection: 'row', alignItems: 'center' },
+  dot: {
+    width: 8, height: 8, borderRadius: 4,
+    backgroundColor: '#CBD5E1', marginHorizontal: 3,
+  },
+});
 
 export default CommunicationBoardScreen;

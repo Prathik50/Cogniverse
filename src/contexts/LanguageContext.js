@@ -66,15 +66,15 @@ const translations = {
       },
       learningBasics: {
         name: 'Learning Basics',
-        description: 'Coming soon - Interactive lessons for basic life skills, numbers, and letters.',
+        description: 'Interactive flashcards for numbers, colors, letters, and daily routines — made fun and easy.',
       },
       socialSkills: {
         name: 'Social Skills',
-        description: 'Coming soon - Practice social interactions and emotional recognition.',
+        description: 'Learn greetings, eye contact, sharing, and more with big visual cards and voice guidance.',
       },
       games: {
-        name: 'Games',
-        description: 'Coming soon - Engaging educational games to make learning fun and interactive.',
+        name: 'Fun & Games',
+        description: 'Therapeutic games to build memory, emotions, counting, and pattern skills through play.',
       },
     },
     comingSoon: 'Coming Soon',
@@ -460,20 +460,20 @@ const translations = {
     // Autism Suite Features
     autismFeatures: {
       myVoice: {
-        name: 'Communication Board',
-        description: 'Express yourself with visual actions and words. Tap cards to build messages and speak them out loud.',
+        name: 'My Voice',
+        description: 'Tap picture cards to say what you need, how you feel, or who you want. Builds sentences you can speak aloud.',
       },
       learnToBuild: {
-        name: 'Learn to Build',
-        description: 'Start with simple words and progress to building sentences. Interactive learning from single words to complete sentences with visual guidance.',
+        name: 'Visual Learning',
+        description: 'Learn animals, objects, and words with pictures. See an image, pick the right word, and hear it spoken.',
       },
       feelingsFinder: {
         name: 'Feelings Finder',
-        description: 'Develop emotional literacy by exploring different emotions. Tap faces to learn about feelings and their contexts.',
+        description: 'Explore emotions with stories about when you feel them, what happens in your body, and what you can do.',
       },
       storyTime: {
         name: 'Story Time',
-        description: 'AI-generated social stories to help understand new situations. Create personalized visual stories for any social scenario.',
+        description: 'AI-generated social stories to help understand new situations.',
       },
     },
     
@@ -544,15 +544,15 @@ const translations = {
       },
       learningBasics: {
         name: 'सीखने की मूल बातें',
-        description: 'जल्द आ रहा है - बुनियादी जीवन कौशल, संख्या और अक्षरों के लिए इंटरैक्टिव पाठ।',
+        description: 'संख्याओं, रंगों, अक्षरों और दैनिक दिनचर्या के लिए इंटरैक्टिव फ्लैशकार्ड — मज़ेदार और आसान।',
       },
       socialSkills: {
         name: 'सामाजिक कौशल',
-        description: 'जल्द आ रहा है - सामाजिक संपर्क और भावनात्मक पहचान का अभ्यास करें।',
+        description: 'बड़े विज़ुअल कार्ड और आवाज़ मार्गदर्शन के साथ अभिवादन, आँख से संपर्क, साझा करना और बहुत कुछ सीखें।',
       },
       games: {
-        name: 'खेल',
-        description: 'जल्द आ रहा है - सीखने को मज़ेदार और इंटरैक्टिव बनाने के लिए आकर्षक शैक्षिक खेल।',
+        name: 'खेल और मज़ा',
+        description: 'खेल के माध्यम से स्मृति, भावनाओं, गिनती और पैटर्न कौशल विकसित करने के लिए चिकित्सकीय खेल।',
       },
     },
     comingSoon: 'जल्द आ रहा है',

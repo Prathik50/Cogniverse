@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   SafeAreaView,
   StyleSheet,
@@ -9,14 +9,19 @@ import {
   Image,
   Animated,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
+import Svg, { Defs, LinearGradient, Stop, Path } from 'react-native-svg';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTTS } from '../contexts/TTSContext';
 import { BackArrowIcon, PlayIcon } from '../components/icons/ConditionIcons';
 import { learningContent, ANIMAL_SOUNDS, categories } from '../data/visualLearningDataLocal';
 
-// Emoji fallbacks if images don't load
+const { width } = Dimensions.get('window');
+const CARD_WIDTH = (width - 56) / 2;
+
+// Emoji fallbacks
 const EMOJI_FALLBACKS = {
   cat: '🐱', dog: '🐕', cow: '🐄', lion: '🦁', elephant: '🐘', horse: '🐴', sheep: '🐑', pig: '🐷',
   bird: '🐦', duck: '🦆', parrot: '🦜', rooster: '🐓', owl: '🦉', crow: '🐦‍⬛',
@@ -24,7 +29,37 @@ const EMOJI_FALLBACKS = {
   morning: '🌅', afternoon: '☀️', evening: '🌆', night: '🌙', noon: '🌞', sunrise: '🌄', sunset: '🌇',
 };
 
-const VisualLearningScreen = ({ onBack }) => {
+// Floating decorative orb
+const FloatingOrb = ({ size, color, top, left, delay = 0 }) => {
+  const floatAnim = useRef(new Animated.Value(0)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(opacityAnim, { toValue: 1, duration: 1000, delay, useNativeDriver: true }).start();
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, { toValue: 1, duration: 3000 + delay, useNativeDriver: true }),
+        Animated.timing(floatAnim, { toValue: 0, duration: 3000 + delay, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
+  const translateY = floatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -12] });
+
+  return (
+    <Animated.View
+      style={{
+        position: 'absolute', top, left, width: size, height: size,
+        borderRadius: size / 2, backgroundColor: color,
+        opacity: opacityAnim, transform: [{ translateY }],
+      }}
+    />
+  );
+};
+
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+
+const SentenceBuilderScreen = ({ onBack }) => {
   const { currentTheme, currentTextSize, currentSpacing } = useTheme();
   const { t } = useLanguage();
   const { speak } = useTTS();
@@ -39,10 +74,23 @@ const VisualLearningScreen = ({ onBack }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const successAnim = useRef(new Animated.Value(0)).current;
+  
+  const headerFade = useRef(new Animated.Value(0)).current;
+  const headerSlide = useRef(new Animated.Value(-30)).current;
+
+  // Staggered animations for category list
+  const cardAnims = useRef(
+    categories.map(() => ({
+      fade: new Animated.Value(0),
+      slide: new Animated.Value(60),
+      scale: new Animated.Value(0.92),
+    }))
+  ).current;
+
   const imageLoadTimeoutRef = useRef(null);
   const [shuffledOptions, setShuffledOptions] = useState([]);
 
-  // Shuffle array function
+  // Shuffle array
   const shuffleArray = (array) => {
     const shuffled = [...array];
     for (let i = shuffled.length - 1; i > 0; i--) {
@@ -54,25 +102,37 @@ const VisualLearningScreen = ({ onBack }) => {
 
   useEffect(() => {
     return () => {
-      if (imageLoadTimeoutRef.current) {
-        clearTimeout(imageLoadTimeoutRef.current);
-      }
+      if (imageLoadTimeoutRef.current) clearTimeout(imageLoadTimeoutRef.current);
     };
   }, []);
 
+  // Main Category Menu Entry Anim
+  useEffect(() => {
+    if (!selectedCategory) {
+      Animated.parallel([
+        Animated.timing(headerFade, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.spring(headerSlide, { toValue: 0, tension: 40, friction: 8, useNativeDriver: true }),
+      ]).start();
+
+      cardAnims.forEach((anim, i) => {
+        const delay = 150 + i * 100;
+        Animated.parallel([
+          Animated.timing(anim.fade, { toValue: 1, duration: 600, delay, useNativeDriver: true }),
+          Animated.spring(anim.slide, { toValue: 0, tension: 50, friction: 8, delay, useNativeDriver: true }),
+          Animated.spring(anim.scale, { toValue: 1, tension: 50, friction: 7, delay, useNativeDriver: true }),
+        ]).start();
+      });
+    }
+  }, [selectedCategory]);
+
   useEffect(() => {
     if (selectedCategory) {
-      // Shuffle options when level changes
       const currentContent = learningContent[selectedCategory][currentLevel];
       setShuffledOptions(shuffleArray(currentContent.options));
-      if (imageLoadTimeoutRef.current) {
-        clearTimeout(imageLoadTimeoutRef.current);
-      }
+      if (imageLoadTimeoutRef.current) clearTimeout(imageLoadTimeoutRef.current);
       setImageLoading(true);
       setImageError(false);
-      imageLoadTimeoutRef.current = setTimeout(() => {
-        setImageLoading(false);
-      }, 2000);
+      imageLoadTimeoutRef.current = setTimeout(() => { setImageLoading(false); }, 2000);
       
       Animated.parallel([
         Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
@@ -82,33 +142,13 @@ const VisualLearningScreen = ({ onBack }) => {
   }, [selectedCategory, currentLevel]);
 
   const handleCategorySelect = (categoryId) => {
-    if (imageLoadTimeoutRef.current) {
-      clearTimeout(imageLoadTimeoutRef.current);
-    }
+    if (imageLoadTimeoutRef.current) clearTimeout(imageLoadTimeoutRef.current);
     setSelectedCategory(categoryId);
     setCurrentLevel(0);
     setSelectedWord(null);
     setShowFeedback(false);
     fadeAnim.setValue(0);
     scaleAnim.setValue(0.9);
-  };
-
-  const handleWordSelect = (word) => {
-    const currentContent = learningContent[selectedCategory][currentLevel];
-    
-    if (selectedCategory === 'sentences') {
-      if (selectedWord && selectedWord.length >= currentContent.maxWords) return;
-      const newSentence = selectedWord ? [...selectedWord, word] : [word];
-      setSelectedWord(newSentence);
-      speak(word);
-      if (newSentence.length === currentContent.correctAnswer.length) {
-        checkSentenceAnswer(newSentence);
-      }
-    } else {
-      setSelectedWord(word);
-      speak(word);
-      setTimeout(() => checkAnswer(word), 500);
-    }
   };
 
   const checkAnswer = (word) => {
@@ -124,16 +164,28 @@ const VisualLearningScreen = ({ onBack }) => {
     }
   };
 
-  const checkSentenceAnswer = (sentence) => {
+  const handleWordSelect = (word) => {
     const currentContent = learningContent[selectedCategory][currentLevel];
-    if (JSON.stringify(sentence) === JSON.stringify(currentContent.correctAnswer)) {
-      setShowFeedback(true);
-      speak('Correct! ' + sentence.join(' '));
-      Animated.sequence([
-        Animated.timing(successAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-        Animated.timing(successAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
-      ]).start();
-      setTimeout(() => nextLevel(), 2000);
+    if (selectedCategory === 'sentences') {
+      if (selectedWord && selectedWord.length >= currentContent.maxWords) return;
+      const newSentence = selectedWord ? [...selectedWord, word] : [word];
+      setSelectedWord(newSentence);
+      speak(word);
+      if (newSentence.length === currentContent.correctAnswer.length) {
+        if (JSON.stringify(newSentence) === JSON.stringify(currentContent.correctAnswer)) {
+          setShowFeedback(true);
+          speak('Correct! ' + newSentence.join(' '));
+          Animated.sequence([
+            Animated.timing(successAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+            Animated.timing(successAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+          ]).start();
+          setTimeout(() => nextLevel(), 2000);
+        }
+      }
+    } else {
+      setSelectedWord(word);
+      speak(word);
+      setTimeout(() => checkAnswer(word), 500);
     }
   };
 
@@ -148,9 +200,7 @@ const VisualLearningScreen = ({ onBack }) => {
     } else {
       speak('Congratulations! You completed all levels!');
       setTimeout(() => {
-        if (imageLoadTimeoutRef.current) {
-          clearTimeout(imageLoadTimeoutRef.current);
-        }
+        if (imageLoadTimeoutRef.current) clearTimeout(imageLoadTimeoutRef.current);
         setSelectedCategory(null);
         setCurrentLevel(0);
       }, 2000);
@@ -179,343 +229,389 @@ const VisualLearningScreen = ({ onBack }) => {
     }
   };
 
+  // Card Touch interaction wrapper
+  const TouchCard = ({ children, onPress, style }) => {
+    const scale = useRef(new Animated.Value(1)).current;
+    return (
+      <AnimatedTouchable
+        style={[style, { transform: [{ scale }] }]}
+        activeOpacity={0.9}
+        onPressIn={() => Animated.spring(scale, { toValue: 0.95, useNativeDriver: true }).start()}
+        onPressOut={() => Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start()}
+        onPress={onPress}
+      >
+        {children}
+      </AnimatedTouchable>
+    );
+  };
+
   const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: currentTheme.colors.background },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: 15 * currentSpacing.scale,
-      backgroundColor: currentTheme.colors.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: currentTheme.colors.border,
+    container: { flex: 1, backgroundColor: '#F8FAFC' },
+    waveContainer: { position: 'absolute', top: 0, left: 0, right: 0 },
+    headerTop: {
+      flexDirection: 'row', alignItems: 'center',
+      paddingHorizontal: 24, marginTop: 16, zIndex: 10,
     },
     backButton: {
-      backgroundColor: currentTheme.colors.primary,
-      borderRadius: 25 * currentSpacing.scale,
-      width: 50 * currentSpacing.scale,
-      height: 50 * currentSpacing.scale,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginRight: 16 * currentSpacing.scale,
+      backgroundColor: 'rgba(255,255,255,0.95)',
+      borderRadius: 20, width: 44, height: 44,
+      justifyContent: 'center', alignItems: 'center',
+      shadowColor: '#0F172A', shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.15, shadowRadius: 12, elevation: 8,
     },
-    headerTitle: {
-      fontSize: 24 * currentTextSize.scale,
-      fontWeight: '700',
-      color: currentTheme.colors.text,
-      flex: 1,
+    headerTitles: { flex: 1, alignItems: 'center', marginRight: 44 },
+    title: {
+      fontSize: 24, fontWeight: '900', color: '#FFFFFF',
+      letterSpacing: 0.3, textShadowColor: 'rgba(0,0,0,0.25)',
+      textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 8,
     },
-    categoryGrid: { padding: 20 * currentSpacing.scale, gap: 16 * currentSpacing.scale },
+    subtitle: {
+      fontSize: 13, color: 'rgba(255,255,255,0.85)',
+      fontWeight: '600', marginTop: 3, letterSpacing: 1,
+      textTransform: 'uppercase',
+    },
+    heroSubtitle: {
+      color: 'rgba(255,255,255,0.8)',
+      fontSize: 14,
+      textAlign: 'center',
+      marginTop: 6,
+      paddingHorizontal: 32,
+    },
+    scrollContent: { paddingTop: 20, paddingHorizontal: 16, paddingBottom: 40 },
+    categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 24, rowGap: 16 },
     categoryCard: {
-      backgroundColor: currentTheme.colors.surface,
-      borderRadius: 20 * currentSpacing.scale,
-      padding: 24 * currentSpacing.scale,
+      backgroundColor: '#FFFFFF',
+      borderRadius: 20,
+      paddingVertical: 24,
+      paddingHorizontal: 12,
       alignItems: 'center',
+      justifyContent: 'center',
+      borderTopWidth: 4,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.15,
-      shadowRadius: 12,
-      elevation: 8,
+      shadowOpacity: 0.09,
+      shadowRadius: 14,
+      elevation: 5,
     },
-    categoryIcon: { fontSize: 60 * currentTextSize.scale, marginBottom: 12 * currentSpacing.scale },
-    categoryName: {
-      fontSize: 20 * currentTextSize.scale,
-      fontWeight: '700',
-      color: currentTheme.colors.text,
+    emojiBox: {
+      width: 80,
+      height: 80,
+      borderRadius: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 14,
     },
-    content: { flex: 1, padding: 20 * currentSpacing.scale },
+    categoryIcon: { fontSize: 44 },
+    categoryName: { fontSize: 15, fontWeight: '800', textAlign: 'center', color: '#1E293B', lineHeight: 21 },
+    topArea: { flex: 1, padding: 20 },
+    levelIndicator: {
+      flexDirection: 'row', justifyContent: 'center', marginBottom: 20,
+    },
     levelBadge: {
-      backgroundColor: currentTheme.colors.primary,
-      paddingHorizontal: 16 * currentSpacing.scale,
-      paddingVertical: 8 * currentSpacing.scale,
-      borderRadius: 20 * currentSpacing.scale,
-      alignSelf: 'center',
-      marginBottom: 20 * currentSpacing.scale,
+      backgroundColor: 'rgba(255,255,255,0.9)',
+      paddingHorizontal: 16, paddingVertical: 8,
+      borderRadius: 20, shadowColor: '#0F172A',
+      shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1,
+      shadowRadius: 8, elevation: 4,
     },
-    levelText: { color: '#FFFFFF', fontSize: 16 * currentTextSize.scale, fontWeight: '600' },
+    levelText: { color: '#4338CA', fontSize: 16, fontWeight: '800' },
     imageContainer: {
-      width: '100%',
-      height: 320 * currentSpacing.scale,
-      backgroundColor: currentTheme.colors.surface,
-      borderRadius: 24 * currentSpacing.scale,
-      overflow: 'hidden',
-      marginBottom: 20 * currentSpacing.scale,
-      borderWidth: 4,
-      borderColor: showFeedback ? '#10B981' : currentTheme.colors.primary,
+      width: '100%', height: 320, backgroundColor: '#FFFFFF',
+      borderRadius: 32, overflow: 'hidden', marginBottom: 20,
+      shadowColor: '#0F172A', shadowOffset: { width: 0, height: 16 },
+      shadowOpacity: 0.15, shadowRadius: 24, elevation: 12,
+      borderWidth: 4, borderColor: showFeedback ? '#10B981' : '#FFFFFF',
     },
     image: { width: '100%', height: '100%', resizeMode: 'cover' },
     emojiContainer: {
-      width: '100%',
-      height: '100%',
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: currentTheme.colors.surface,
+      width: '100%', height: '100%', justifyContent: 'center',
+      alignItems: 'center', backgroundColor: '#F8FAFC',
     },
-    emojiText: {
-      fontSize: 180 * currentTextSize.scale,
-      textAlign: 'center',
-    },
+    emojiText: { fontSize: 140, textAlign: 'center' },
     imageLoadingContainer: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: currentTheme.colors.surface,
-      zIndex: 1,
+      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+      justifyContent: 'center', alignItems: 'center',
+      backgroundColor: '#F8FAFC', zIndex: 1,
     },
-    actionButtonsRow: {
-      flexDirection: 'row',
-      gap: 12 * currentSpacing.scale,
-      marginBottom: 20 * currentSpacing.scale,
-    },
+    actionButtonsRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
     speakButton: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: currentTheme.colors.primary,
-      paddingVertical: 14 * currentSpacing.scale,
-      borderRadius: 16 * currentSpacing.scale,
+      flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      backgroundColor: '#FFFFFF', paddingVertical: 16, borderRadius: 20,
+      shadowColor: '#4338CA', shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.15, shadowRadius: 12, elevation: 6,
     },
     animalSoundButton: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: '#10B981',
-      paddingVertical: 14 * currentSpacing.scale,
-      borderRadius: 16 * currentSpacing.scale,
+      flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      backgroundColor: '#10B981', paddingVertical: 16, borderRadius: 20,
+      shadowColor: '#10B981', shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.25, shadowRadius: 12, elevation: 6,
     },
-    buttonText: {
-      color: '#FFFFFF',
-      fontSize: 16 * currentTextSize.scale,
-      fontWeight: '600',
-      marginLeft: 8 * currentSpacing.scale,
-    },
+    btnTextPrimary: { color: '#4338CA', fontSize: 16, fontWeight: '800', marginLeft: 8 },
+    btnTextWhite: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', marginLeft: 8 },
     sentenceArea: {
-      backgroundColor: currentTheme.colors.surface,
-      borderRadius: 20 * currentSpacing.scale,
-      padding: 20 * currentSpacing.scale,
-      minHeight: 80 * currentSpacing.scale,
-      marginBottom: 20 * currentSpacing.scale,
-      borderWidth: 2,
-      borderColor: showFeedback ? '#10B981' : currentTheme.colors.border,
+      backgroundColor: '#FFFFFF', borderRadius: 24, padding: 24,
+      minHeight: 120, marginBottom: 20,
+      shadowColor: '#0F172A', shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.08, shadowRadius: 16, elevation: 8,
+      borderWidth: 2, borderColor: showFeedback ? '#10B981' : '#F1F5F9',
     },
-    sentenceWords: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 * currentSpacing.scale },
+    sentenceWords: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
     wordChip: {
-      backgroundColor: currentTheme.colors.primary,
-      paddingHorizontal: 20 * currentSpacing.scale,
-      paddingVertical: 12 * currentSpacing.scale,
-      borderRadius: 16 * currentSpacing.scale,
+      backgroundColor: '#4338CA', paddingHorizontal: 20, paddingVertical: 12,
+      borderRadius: 16, shadowColor: '#4338CA', shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
     },
-    wordChipText: { color: '#FFFFFF', fontSize: 18 * currentTextSize.scale, fontWeight: '600' },
+    wordChipText: { color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
     removeButton: {
-      backgroundColor: '#EF4444',
-      paddingVertical: 14 * currentSpacing.scale,
-      borderRadius: 16 * currentSpacing.scale,
-      alignItems: 'center',
-      marginBottom: 20 * currentSpacing.scale,
+      backgroundColor: '#FFFFFF', paddingVertical: 14, borderRadius: 16,
+      alignItems: 'center', marginBottom: 20, borderWidth: 2, borderColor: '#EF4444',
     },
-    wordOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 * currentSpacing.scale },
+    removeText: { color: '#EF4444', fontSize: 16, fontWeight: '800' },
+    wordOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
     wordOption: {
-      backgroundColor: currentTheme.colors.surface,
-      paddingHorizontal: 24 * currentSpacing.scale,
-      paddingVertical: 16 * currentSpacing.scale,
-      borderRadius: 16 * currentSpacing.scale,
-      borderWidth: 2,
-      borderColor: currentTheme.colors.border,
+      backgroundColor: '#FFFFFF', paddingHorizontal: 24, paddingVertical: 16,
+      borderRadius: 20, shadowColor: '#0F172A', shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.08, shadowRadius: 12, elevation: 4, borderWidth: 1, borderColor: '#E2E8F0',
     },
-    wordOptionText: {
-      color: currentTheme.colors.text,
-      fontSize: 18 * currentTextSize.scale,
-      fontWeight: '600',
-    },
+    wordOptionText: { color: '#1E293B', fontSize: 18, fontWeight: '800' },
     successOverlay: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(16, 185, 129, 0.9)',
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderRadius: 24 * currentSpacing.scale,
+      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'rgba(16, 185, 129, 0.85)',
+      justifyContent: 'center', alignItems: 'center',
     },
-    successText: { fontSize: 48 * currentTextSize.scale, fontWeight: '700', color: '#FFFFFF' },
+    successText: { fontSize: 80, fontWeight: '900', color: '#FFFFFF' },
   });
+
   const currentContent = selectedCategory ? learningContent[selectedCategory][currentLevel] : null;
 
   const imageSource = useMemo(() => {
     if (!currentContent) return undefined;
     if (currentContent.image) {
       const resolved = Image.resolveAssetSource(currentContent.image);
-      if (resolved?.uri) {
-        return { uri: resolved.uri };
-      }
+      if (resolved?.uri) return { uri: resolved.uri };
       return currentContent.image;
     }
-    if (currentContent.imageUri) {
-      return { uri: currentContent.imageUri };
-    }
+    if (currentContent.imageUri) return { uri: currentContent.imageUri };
     return undefined;
   }, [currentContent]);
 
   const isSentenceMode = selectedCategory === 'sentences';
   const hasAnimalSound = currentContent?.hasSound && (selectedCategory === 'animals' || selectedCategory === 'birds');
 
+  // Main Category Menu view
   if (!selectedCategory) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          {onBack && (
-            <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.7}>
-              <BackArrowIcon size={24 * currentTextSize.scale} color={currentTheme.colors.surface} />
-            </TouchableOpacity>
-          )}
-          <Text style={styles.headerTitle}>{t('visualLearningTitle')}</Text>
+      <View style={styles.container}>
+        <View style={styles.waveContainer}>
+          <Svg height={350} width="100%" preserveAspectRatio="none" viewBox="0 0 1440 320">
+            <Defs>
+              <LinearGradient id="vlGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <Stop offset="0%" stopColor="#818CF8" />
+                <Stop offset="50%" stopColor="#4338CA" />
+                <Stop offset="100%" stopColor="#312E81" />
+              </LinearGradient>
+            </Defs>
+            <Path 
+               fill="url(#vlGrad)" 
+               d="M0,160L80,149.3C160,139,320,117,480,122.7C640,128,800,160,960,165.3C1120,171,1280,149,1360,138.7L1440,128L1440,0L1360,0C1280,0,1120,0,960,0C800,0,640,0,480,0C320,0,160,0,80,0L0,0Z" 
+            />
+          </Svg>
         </View>
-        <ScrollView contentContainerStyle={styles.categoryGrid}>
-          {categories.map((category) => (
-            <TouchableOpacity
-              key={category.id}
-              style={[styles.categoryCard, { backgroundColor: category.bgColor }]}
-              onPress={() => handleCategorySelect(category.id)}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.categoryIcon}>{category.icon}</Text>
-              <Text style={styles.categoryName}>{t(`visualLearningCategories.${category.id}`)}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </SafeAreaView>
+
+        <FloatingOrb size={80} color="rgba(255,255,255,0.15)" top={70} left={width - 100} delay={0} />
+        <FloatingOrb size={50} color="rgba(255,255,255,0.1)" top={140} left={30} delay={400} />
+
+        <SafeAreaView style={{ flex: 1 }}>
+          <Animated.View style={[styles.headerTop, { opacity: headerFade, transform: [{ translateY: headerSlide }] }]}>
+            {onBack && (
+              <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.8}>
+                <BackArrowIcon size={22} color="#4338CA" />
+              </TouchableOpacity>
+            )}
+            <View style={styles.headerTitles}>
+              <Text style={styles.title} allowFontScaling={true} maxFontSizeMultiplier={1.3}>Look & Learn</Text>
+              <Text style={styles.subtitle} allowFontScaling={true} maxFontSizeMultiplier={1.3}>Explore & Identify</Text>
+              <Text style={styles.heroSubtitle}>Choose a category to start learning!</Text>
+            </View>
+          </Animated.View>
+
+          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            <View style={styles.categoryGrid}>
+              {categories.map((category, index) => {
+                const isLastOdd = index === categories.length - 1 && categories.length % 2 !== 0;
+                return (
+                 <Animated.View
+                  key={category.id}
+                  style={{
+                    width: isLastOdd ? width - 32 : CARD_WIDTH,
+                    opacity: cardAnims[index].fade,
+                    transform: [
+                      { translateY: cardAnims[index].slide },
+                      { scale: cardAnims[index].scale },
+                    ],
+                  }}
+                 >
+                  <TouchCard
+                    style={[
+                       styles.categoryCard, 
+                       { borderTopColor: category.color },
+                       isLastOdd && { width: width - 32 }
+                    ]}
+                    onPress={() => handleCategorySelect(category.id)}
+                  >
+                    <View style={[styles.emojiBox, { backgroundColor: category.color + '18' }]}>
+                       <Text style={styles.categoryIcon}>{category.icon}</Text>
+                    </View>
+                    <Text style={[styles.categoryName, { color: category.color }]}>
+                      {t(`visualLearningCategories.${category.id}`) || category.name}
+                    </Text>
+                  </TouchCard>
+                 </Animated.View>
+                );
+              })}
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </View>
     );
   }
 
-  if (!currentContent) {
-    return null;
-  }
+  if (!currentContent) return null;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => {
-            if (imageLoadTimeoutRef.current) {
-              clearTimeout(imageLoadTimeoutRef.current);
-            }
-            setSelectedCategory(null);
-            setCurrentLevel(0);
-            setSelectedWord(null);
-          }}
-          activeOpacity={0.7}
-        >
-          <BackArrowIcon size={24 * currentTextSize.scale} color={currentTheme.colors.surface} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t(`visualLearningCategories.${selectedCategory}`)}</Text>
+    <View style={styles.container}>
+      {/* Background wave for level view */}
+      <View style={styles.waveContainer}>
+        <Svg height={350} width="100%" preserveAspectRatio="none" viewBox="0 0 1440 320">
+          <Defs>
+            <LinearGradient id="lvlGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <Stop offset="0%" stopColor="#4338CA" />
+              <Stop offset="100%" stopColor="#EC4899" />
+            </LinearGradient>
+          </Defs>
+          <Path fill="url(#lvlGrad)" d="M0,224L48,202.7C96,181,192,139,288,138.7C384,139,480,181,576,192C672,203,768,181,864,154.7C960,128,1056,96,1152,90.7C1248,85,1344,107,1392,117.3L1440,128L1440,0L1392,0C1344,0,1248,0,1152,0C1056,0,960,0,864,0C768,0,672,0,576,0C480,0,384,0,288,0C192,0,96,0,48,0L0,0Z" />
+        </Svg>
       </View>
-      <ScrollView style={styles.content}>
-        <View style={styles.levelBadge}>
-          <Text style={styles.levelText}>Level {currentLevel + 1}/{learningContent[selectedCategory].length}</Text>
-        </View>
-        <Animated.View style={[styles.imageContainer, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}> 
-          {!imageError && imageSource ? (
-            <>
-              {imageLoading && (
-                <View style={styles.imageLoadingContainer}>
-                  <ActivityIndicator size="large" color={currentTheme.colors.primary} />
-                </View>
-              )}
-              <Image
-                key={`${selectedCategory}-${currentContent.id}`}
-                source={imageSource}
-                style={styles.image}
-                onLoadStart={() => setImageLoading(true)}
-                onLoad={() => {
-                  if (imageLoadTimeoutRef.current) {
-                    clearTimeout(imageLoadTimeoutRef.current);
-                  }
-                  setImageLoading(false);
-                }}
-                onLoadEnd={() => {
-                  if (imageLoadTimeoutRef.current) {
-                    clearTimeout(imageLoadTimeoutRef.current);
-                  }
-                  setImageLoading(false);
-                }}
-                onError={() => {
-                  setImageLoading(false);
-                  setImageError(true);
-                  console.log('Image load error - showing emoji fallback');
-                }}
-                resizeMode="cover"
-              />
-            </>
-          ) : (
-            <View style={styles.emojiContainer}>
-              <Text style={styles.emojiText}>
-                {Array.isArray(currentContent.correctAnswer)
-                  ? '📷'
-                  : EMOJI_FALLBACKS[currentContent.correctAnswer] || '📷'}
-              </Text>
-            </View>
-          )}
-          {showFeedback && (
-            <Animated.View style={[styles.successOverlay, { opacity: successAnim }]}> 
-              <Text style={styles.successText}>✓</Text>
-            </Animated.View>
-          )}
-        </Animated.View>
-        <View style={styles.actionButtonsRow}>
-          <TouchableOpacity style={styles.speakButton} onPress={speakAnswer} activeOpacity={0.8}>
-            <PlayIcon size={20} color="#FFFFFF" />
-            <Text style={styles.buttonText}>{t('hearAnswer')}</Text>
+
+      <SafeAreaView style={{ flex: 1 }}>
+        <View style={styles.headerTop}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => {
+              if (imageLoadTimeoutRef.current) clearTimeout(imageLoadTimeoutRef.current);
+              setSelectedCategory(null);
+              setCurrentLevel(0);
+              setSelectedWord(null);
+            }}
+            activeOpacity={0.8}
+          >
+            <BackArrowIcon size={22} color="#4338CA" />
           </TouchableOpacity>
-          {hasAnimalSound && (
-            <TouchableOpacity style={styles.animalSoundButton} onPress={playAnimalSound} activeOpacity={0.8}>
-              <Text style={[styles.buttonText, { marginLeft: 0 }]}>🔊 {t('animalSound')}</Text>
-            </TouchableOpacity>
-          )}
+          <View style={styles.headerTitles}>
+            <Text style={styles.title}>{t(`visualLearningCategories.${selectedCategory}`)}</Text>
+          </View>
         </View>
-        {isSentenceMode && (
-          <>
-            <View style={styles.sentenceArea}>
-              <View style={styles.sentenceWords}>
-                {!selectedWord || selectedWord.length === 0 ? (
-                  <Text style={{ color: currentTheme.colors.textSecondary }}>{t('tapActionsBelow')}</Text>
-                ) : (
-                  selectedWord.map((word, index) => (
-                    <View key={index} style={styles.wordChip}>
-                      <Text style={styles.wordChipText}>{word}</Text>
-                    </View>
-                  ))
-                )}
-              </View>
+
+        <ScrollView style={styles.topArea} showsVerticalScrollIndicator={false}>
+          <View style={styles.levelIndicator}>
+            <View style={styles.levelBadge}>
+              <Text style={styles.levelText}>Level {currentLevel + 1}/{learningContent[selectedCategory].length}</Text>
             </View>
-            {selectedWord && selectedWord.length > 0 && (
-              <TouchableOpacity style={styles.removeButton} onPress={removeLastWord} activeOpacity={0.8}>
-                <Text style={[styles.buttonText, { marginLeft: 0 }]}>{t('removeLastWord')}</Text>
-              </TouchableOpacity>
+          </View>
+
+          <Animated.View style={[styles.imageContainer, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}> 
+            {!imageError && imageSource ? (
+              <>
+                {imageLoading && (
+                  <View style={styles.imageLoadingContainer}>
+                    <ActivityIndicator size="large" color="#4338CA" />
+                  </View>
+                )}
+                <Image
+                  key={`${selectedCategory}-${currentContent.id}`}
+                  source={imageSource}
+                  style={styles.image}
+                  onLoadStart={() => setImageLoading(true)}
+                  onLoad={() => {
+                    if (imageLoadTimeoutRef.current) clearTimeout(imageLoadTimeoutRef.current);
+                    setImageLoading(false);
+                  }}
+                  onLoadEnd={() => {
+                    if (imageLoadTimeoutRef.current) clearTimeout(imageLoadTimeoutRef.current);
+                    setImageLoading(false);
+                  }}
+                  onError={() => {
+                    setImageLoading(false);
+                    setImageError(true);
+                  }}
+                />
+              </>
+            ) : (
+              <View style={styles.emojiContainer}>
+                <Text style={styles.emojiText}>
+                  {Array.isArray(currentContent.correctAnswer) ? '📷' : EMOJI_FALLBACKS[currentContent.correctAnswer] || '📷'}
+                </Text>
+              </View>
             )}
-          </>
-        )}
-        <View style={styles.wordOptions}>
-          {shuffledOptions.map((word, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.wordOption}
-              onPress={() => handleWordSelect(word)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.wordOptionText}>{t(`words.${word}`) || word}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+            {showFeedback && (
+              <Animated.View style={[styles.successOverlay, { opacity: successAnim }]}>
+                <Text style={styles.successText}>✓</Text>
+              </Animated.View>
+            )}
+          </Animated.View>
+
+          <View style={styles.actionButtonsRow}>
+            <TouchCard style={styles.speakButton} onPress={speakAnswer}>
+              <PlayIcon size={20} color="#4338CA" />
+              <Text style={styles.btnTextPrimary}>{t('hearAnswer')}</Text>
+            </TouchCard>
+            {hasAnimalSound && (
+              <TouchCard style={styles.animalSoundButton} onPress={playAnimalSound}>
+                <Text style={styles.btnTextWhite}>🔊 {t('animalSound')}</Text>
+              </TouchCard>
+            )}
+          </View>
+
+          {isSentenceMode && (
+            <>
+              <View style={styles.sentenceArea}>
+                <View style={styles.sentenceWords}>
+                  {!selectedWord || selectedWord.length === 0 ? (
+                    <Text style={{ color: '#94A3B8', fontSize: 16, fontWeight: '500' }}>{t('tapActionsBelow')}</Text>
+                  ) : (
+                    selectedWord.map((word, index) => (
+                      <View key={index} style={styles.wordChip}>
+                        <Text style={styles.wordChipText}>{word}</Text>
+                      </View>
+                    ))
+                  )}
+                </View>
+              </View>
+              {selectedWord && selectedWord.length > 0 && (
+                <TouchCard style={styles.removeButton} onPress={removeLastWord}>
+                  <Text style={styles.removeText}>{t('removeLastWord')}</Text>
+                </TouchCard>
+              )}
+            </>
+          )}
+
+          <View style={styles.wordOptions}>
+            {shuffledOptions.map((word, index) => (
+              <TouchCard
+                key={index}
+                style={styles.wordOption}
+                onPress={() => handleWordSelect(word)}
+              >
+                <Text style={styles.wordOptionText}>{t(`words.${word}`) || word}</Text>
+              </TouchCard>
+            ))}
+          </View>
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 };
 
-export default VisualLearningScreen;
+export default SentenceBuilderScreen;
+

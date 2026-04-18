@@ -283,27 +283,6 @@ export const LearnToBuildIcon = ({ size = 48, color = '#10B981' }) => (
   </Svg>
 );
 
-// Feelings Finder Icon
-export const FeelingsFinderIcon = ({ size = 48, color = '#F59E0B' }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Circle cx="12" cy="12" r="10" fill={color} />
-    <Circle cx="9" cy="10" r="1.5" fill="white" />
-    <Circle cx="15" cy="10" r="1.5" fill="white" />
-    <Path
-      d="M8 14C8 14 9.5 16 12 16C14.5 16 16 14 16 14"
-      stroke="white"
-      strokeWidth="2"
-      strokeLinecap="round"
-    />
-    <Path
-      d="M7 8C7 8 8 7 9 7M17 8C17 8 16 7 15 7"
-      stroke="white"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-    />
-  </Svg>
-);
-
 // Story Time Icon
 export const StoryTimeIcon = ({ size = 48, color = '#8B5CF6' }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">

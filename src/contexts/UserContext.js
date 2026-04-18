@@ -109,6 +109,49 @@ const UserProviderInner = ({ children }) => {
     }
   };
 
+  const logActivity = async (activityName, durationMinutes = 1) => {
+    if (!userData) return;
+    
+    const today = new Date().toISOString().split('T')[0];
+    const stats = userData.activityStats || { 
+      totalActivities: 0, 
+      totalMinutes: 0, 
+      milestones: 0, 
+      lastActiveDate: null, 
+      streak: 0 
+    };
+
+    let newStreak = stats.streak;
+    
+    if (stats.lastActiveDate) {
+      const lastDate = new Date(stats.lastActiveDate);
+      const todayDate = new Date(today);
+      const diffTime = todayDate - lastDate;
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 1) {
+        newStreak += 1;
+      } else if (diffDays > 1) {
+        newStreak = 1;
+      }
+    } else {
+      newStreak = 1;
+    }
+
+    const newActivities = stats.totalActivities + 1;
+    const newMilestones = Math.floor(newActivities / 5); // 1 milestone every 5 activities
+
+    const newStats = {
+      totalActivities: newActivities,
+      totalMinutes: stats.totalMinutes + durationMinutes,
+      milestones: newMilestones,
+      lastActiveDate: today,
+      streak: newStreak > 0 ? newStreak : 1, // Ensure at least 1 if active
+    };
+
+    await updateUserData({ activityStats: newStats });
+  };
+
   const logout = async () => {
     try {
       await AsyncStorage.removeItem('userData');
@@ -128,6 +171,7 @@ const UserProviderInner = ({ children }) => {
       signup,
       updateUserData,
       logout,
+      logActivity,
     }}>
       {children}
     </UserContext.Provider>

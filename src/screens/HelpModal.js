@@ -22,30 +22,30 @@ const HELP_CONTENT_EN = {
     {
       id: 'autism-communication',
       name: 'Autism & Communication',
-      description: 'This comprehensive communication module contains four powerful features: "My Voice" provides unlimited AI-generated vocabulary for communication boards - tap any word or symbol to speak. "Learn to Build" teaches sentence construction progressively, from single words to complex sentences with visual guidance. "Feelings Finder" develops emotional vocabulary by exploring 8 core emotions with stories and contexts. "Story Time" creates personalized social stories to prepare for real-world situations. Each feature opens by tapping its card. This module is crucial for non-verbal communication, language development, emotional intelligence, and social understanding, directly addressing core challenges in autism communication.',
+      description: 'This comprehensive communication module contains powerful features: "My Voice" provides unlimited AI-generated vocabulary for communication boards - tap any word or symbol to speak. "Learn to Build" teaches sentence construction progressively, from single words to complex sentences with visual guidance. "Story Time" creates personalized social stories to prepare for real-world situations. Each feature opens by tapping its card. This module is crucial for non-verbal communication, language development, and social understanding, directly addressing core challenges in autism communication.',
       icon: '🗣️',
       impact: 'Develops expressive language, reduces frustration from communication barriers, builds confidence in social interactions, and improves emotional regulation. Regular use leads to measurable improvement in vocabulary, sentence complexity, and social engagement.',
     },
     {
       id: 'learning-basics',
       name: 'Learning Basics',
-      description: 'Coming soon - This foundational learning module will teach essential life skills through interactive visual lessons. It will include: Number recognition and counting activities, Letter recognition and phonics games, Basic math operations with visual aids, Daily life skills like telling time, recognizing colors and shapes, and understanding money. Each lesson adapts to the child\'s pace and provides positive reinforcement. The gamified approach makes learning enjoyable while building core academic and practical skills.',
+      description: 'This foundational learning module teaches essential skills through interactive visual flashcards. It includes: Number recognition (1-20) with spoken words, Color identification with vibrant full-screen displays, Full alphabet (A-Z) with matching pictures, and Daily routines (wake up, brush teeth, learn, sleep). Each flashcard shows one item at a time with a Next button and Voice button. The simple, distraction-free layout is designed for children with autism and Down syndrome.',
       icon: '📚',
-      impact: 'Will build strong academic foundations, improve school readiness, teach practical daily living skills, and boost confidence in learning abilities.',
+      impact: 'Builds strong academic foundations, improves school readiness, teaches practical daily living skills, and boosts confidence in learning abilities.',
     },
     {
       id: 'social-skills',
       name: 'Social Skills',
-      description: 'Coming soon - This interactive module will focus on developing crucial social competencies through visual learning and practice. It will include: Recognizing facial expressions and body language, Understanding social cues and appropriate responses, Practicing conversation skills with visual prompts, Learning personal space and boundaries, Managing transitions and changes in routine, Role-playing common social scenarios. Each activity uses visual supports and provides immediate feedback to reinforce positive social behaviors.',
+      description: 'This visual learning module teaches essential social skills through big, focused flashcards. It includes 12 social scenarios: Hello (waving), Shaking Hands, Thank You, Smiling, Eye Contact, Asking for Help, Hugging, Listening, Sorry, Goodbye, Sharing, and Waiting Your Turn. Each card shows a large picture with a voice button that explains the skill in simple, clear language. Children navigate one card at a time with Back and Next buttons.',
       icon: '👥',
-      impact: 'Will significantly improve peer interactions, reduce social anxiety, enhance emotional intelligence, and build lasting friendships through better social understanding.',
+      impact: 'Improves peer interactions, reduces social anxiety, enhances understanding of social cues, and builds lasting friendships through better social understanding.',
     },
     {
       id: 'games',
       name: 'Educational Games',
-      description: 'Coming soon - A fun collection of educational games that reinforce learning through play. Games will include: Memory matching games with symbols and words, Word association games to build vocabulary, Pattern recognition puzzles, Interactive stories with choices, Reward-based challenges that track progress. All games incorporate learned concepts from other modules and adapt difficulty automatically. Points and achievements provide motivation while data tracks improvement.',
+      description: 'A fun collection of four therapeutic games that build cognitive skills through play. Match Pairs: Memory card game with Easy (4 cards) and Medium (6 cards) modes. Emotion Detective: Match emotion words to emoji faces across 8 rounds. Count and Tap: Count animated objects and tap the correct number. Pattern Puzzle: Complete visual sequences with a hint system. All games include spoken feedback, celebration screens, and progress tracking.',
       icon: '🎮',
-      impact: 'Will maintain motivation and engagement, reinforce learned skills through repetition, provide stress-free practice opportunities, and make learning feel like play rather than work.',
+      impact: 'Maintains motivation and engagement, reinforces learned skills through repetition, provides stress-free practice opportunities, and makes learning feel like play rather than work.',
     },
     {
       id: 'dashboard',
@@ -62,7 +62,7 @@ const HELP_CONTENT_EN = {
     {
       id: 'overview',
       name: 'Autism & Communication Suite Overview',
-      description: 'This suite contains four specialized tools working together to build comprehensive communication skills. Each tool addresses different aspects of communication: My Voice for expressive communication, Learn to Build for language structure, Feelings Finder for emotional expression, and Story Time for social understanding. Use them individually or in combination to create a holistic communication development program.',
+      description: 'This suite contains specialized tools working together to build comprehensive communication skills. Each tool addresses different aspects of communication: My Voice for expressive communication, Learn to Build for language structure, and Story Time for social understanding. Use them individually or in combination to create a holistic communication development program.',
     },
     {
       id: 'my-voice',
@@ -79,13 +79,6 @@ const HELP_CONTENT_EN = {
       impact: 'Immediate impact: Develops understanding of grammar basics, provides hands-on sentence practice, reinforces word combinations. Long-term benefits: Transitions from single words to full conversations, improves communication clarity, supports academic writing skills, builds linguistic competence.',
     },
     {
-      id: 'feelings-finder',
-      name: 'Feelings Finder - Emotional Literacy',
-      description: 'An interactive emotional learning tool featuring 8 core emotions. Features include: Visual emotion cards with facial expressions (Happy, Sad, Angry, Surprised, Confused, Scared, Excited, Proud), Color-coded emotions for easy visual identification, Tap any emotion to read detailed description, Context stories explain when someone feels this way, "Speak" button vocalizes emotional states, Relatable scenarios help connect emotions to real situations. This tool develops emotional vocabulary and understanding, essential for self-regulation and social skills. Users learn to identify their own feelings and recognize emotions in others.',
-      icon: '😊',
-      impact: 'Immediate impact: Builds emotional vocabulary, helps identify current feelings, validates emotional experiences. Long-term benefits: Improves emotional regulation, enhances empathy and social understanding, reduces emotional outbursts, supports mental health through self-awareness.',
-    },
-    {
       id: 'story-time',
       name: 'Story Time - Social Stories',
       description: 'AI-powered visual social stories prepare users for real-world situations. Features include: Pre-made stories for common scenarios (birthday parties, doctor visits, school events), Custom story creation by typing any situation, Step-by-step visual guides with emoji illustrations, Simple, clear language at appropriate reading level, Navigation controls to move through story steps, Text-to-speech reads each step aloud, Personalized scenarios match user\'s specific needs. Social stories are evidence-based tools that reduce anxiety by familiarizing users with new situations before they happen. Users can create stories for specific upcoming events.',
@@ -95,7 +88,7 @@ const HELP_CONTENT_EN = {
     {
       id: 'integration-tips',
       name: 'Using All Features Together',
-      description: 'For best results, use features in combination: Start with Feelings Finder to identify current emotional state, Use My Voice to communicate about feelings, Build sentences with Learn to Build to express complex thoughts, Read Story Time stories to prepare for upcoming social situations, Practice daily with different features to build consistency. This integrated approach creates comprehensive communication development addressing all aspects of expressive and receptive language plus social-emotional skills.',
+      description: 'For best results, use features in combination: Use My Voice to communicate needs and feelings, Build sentences with Learn to Build to express complex thoughts, Read Story Time stories to prepare for upcoming social situations, Practice daily with different features to build consistency. This integrated approach creates comprehensive communication development addressing all aspects of expressive and receptive language plus social-emotional skills.',
     },
   ],
   communicationBoard: [
@@ -157,33 +150,7 @@ const HELP_CONTENT_EN = {
       description: 'Immediate benefits: Understands that words combine to form meaning, learns basic grammar patterns through practice, improves word ordering skills, connects visual symbols with grammar concepts, gains confidence in sentence construction. Long-term development: Transitions from single words to full conversations, develops proper grammar skills, supports written language development, improves communication clarity, enhances academic language skills. This tool bridges the gap between PECS-style communication and true language mastery, building the foundation for more complex communication and potential literacy development.',
     },
   ],
-  feelingsFinder: [
-    {
-      id: 'overview',
-      name: 'Feelings Finder Overview',
-      description: 'Feelings Finder builds emotional literacy - the foundation of emotional intelligence and social skills. This tool introduces 8 core emotions through visual, interactive exploration. Users learn to identify, name, and understand emotions through relatable stories and contexts. For users with autism who often struggle with recognizing or expressing emotions, this tool provides concrete ways to understand abstract feeling states. Each emotion is color-coded for visual memory and paired with scenarios that help users recognize when they or others might experience that feeling.',
-    },
-    {
-      id: 'exploring-feelings',
-      name: 'Exploring the 8 Core Emotions',
-      description: 'Happy (Green): Joy, contentment, pleasure. Example: When getting a hug, eating ice cream, or playing with friends. Sad (Blue): Disappointment, loss, hurt feelings. Example: When missing someone, when something breaks, when feeling left out. Angry (Red): Frustration, annoyance, being upset. Example: When someone takes your toy, when things don\'t go your way, when feeling misunderstood. Surprised (Orange): Shock, amazement, sudden realization. Example: When seeing something unexpected, getting an unplanned gift, discovering something new. Confused (Purple): Uncertainty, not understanding. Example: When instructions are unclear, when something doesn\'t make sense. Scared (Yellow): Fear, anxiety, worry. Example: When it\'s dark, loud noises, new situations. Excited (Pink): High energy, anticipation, enthusiasm. Example: Before a birthday party, going to a favorite place. Proud (Gold): Accomplishment, satisfaction. Example: After finishing something hard, when praised. Tap any emotion to read full description and context story.',
-    },
-    {
-      id: 'using-feelings',
-      name: 'Using Feelings in Daily Life',
-      description: 'Practical application: Tap "Speak" to hear the emotion vocalized, helping connect words to feelings. Use the communication board to express current feelings using emotion words. Practice identifying the emotion being felt right now. Discuss emotions with caregivers using the provided scenarios. Relate story examples to personal experiences. The app teaches that all emotions are valid - there are no "wrong" feelings. Understanding that emotions are temporary helps users process feelings without becoming overwhelmed. This knowledge supports emotional regulation strategies.',
-    },
-    {
-      id: 'building-awareness',
-      name: 'Building Emotional Awareness and Intelligence',
-      description: 'Self-awareness development: Identify own emotional states accurately, Recognize physical sensations associated with emotions (butterflies when scared, warm when happy), Develop vocabulary to communicate feelings, Understand that emotions change and pass. Social awareness development: Recognize emotions in others through facial expressions, Understand that others have feelings different from your own, Develop empathy by imagining how others might feel, Learn appropriate responses to others\' emotions. Self-regulation support: Accept feelings without judgment, Learn that feelings don\'t have to dictate actions, Develop coping strategies for difficult emotions, Gain confidence in emotional management.',
-    },
-    {
-      id: 'impact',
-      name: 'Impact and Benefits',
-      description: 'Immediate benefits: Reduces frustration from inability to express emotions, provides vocabulary for emotional communication, helps identify and name current feelings, validates emotional experiences, reduces confusion about internal states. Long-term development: Improves emotional regulation and reduces meltdowns, enhances social skills and peer relationships, builds empathy and emotional connection with others, supports mental health through self-awareness, increases ability to handle transitions and changes, improves communication about internal states with caregivers. For users with autism, this tool addresses a core deficit area (emotion recognition and expression) that significantly impacts social functioning and quality of life. Regular use leads to measurable improvements in emotional intelligence over time.',
-    },
-  ],
+
   storyTime: [
     {
       id: 'overview',
@@ -258,23 +225,23 @@ const HELP_CONTENT_HI = {
     {
       id: 'learning-basics',
       name: 'सीखने की मूल बातें',
-      description: 'जल्द आ रहा है - यह बुनियादी शिक्षण मॉड्यूल इंटरैक्टिव दृश्य पाठों के माध्यम से आवश्यक जीवन कौशल सिखाएगा। इसमें शामिल होगा: संख्या पहचान और गिनती गतिविधियां, अक्षर पहचान और ध्वन्यात्मक खेल, दृश्य सहायता के साथ बुनियादी गणित संचालन, दैनिक जीवन कौशल जैसे समय बताना, रंगों और आकृतियों को पहचानना, और पैसे को समझना। प्रत्येक पाठ बच्चे की गति के अनुकूल होता है और सकारात्मक सुदृढीकरण प्रदान करता है।',
+      description: 'यह बुनियादी शिक्षण मॉड्यूल इंटरैक्टिव विज़ुअल फ्लैशकार्ड के माध्यम से आवश्यक कौशल सिखाता है। इसमें शामिल है: संख्या पहचान (1-20), रंग पहचान, पूर्ण वर्णमाला (A-Z) चित्रों के साथ, और दैनिक दिनचर्या। प्रत्येक फ्लैशकार्ड एक समय में एक आइटम दिखाता है जिसमें Next बटन और Voice बटन होता है।',
       icon: '📚',
-      impact: 'मजबूत शैक्षणिक नींव बनाएगा, स्कूल की तैयारी में सुधार करेगा, व्यावहारिक दैनिक जीवन कौशल सिखाएगा, और सीखने की क्षमताओं में आत्मविश्वास बढ़ाएगा।',
+      impact: 'मजबूत शैक्षणिक नींव बनाता है, स्कूल की तैयारी में सुधार करता है, व्यावहारिक दैनिक जीवन कौशल सिखाता है, और सीखने की क्षमताओं में आत्मविश्वास बढ़ाता है।',
     },
     {
       id: 'social-skills',
       name: 'सामाजिक कौशल',
-      description: 'जल्द आ रहा है - यह इंटरैक्टिव मॉड्यूल दृश्य शिक्षण और अभ्यास के माध्यम से महत्वपूर्ण सामाजिक दक्षताओं को विकसित करने पर ध्यान केंद्रित करेगा। इसमें शामिल होगा: चेहरे के भाव और शरीर की भाषा को पहचानना, सामाजिक संकेतों और उपयुक्त प्रतिक्रियाओं को समझना, दृश्य संकेतों के साथ बातचीत कौशल का अभ्यास करना, व्यक्तिगत स्थान और सीमाओं को सीखना, संक्रमण और दिनचर्या में बदलाव का प्रबंधन करना, सामान्य सामाजिक परिदृश्यों का रोल-प्लेइंग।',
+      description: 'यह विज़ुअल लर्निंग मॉड्यूल बड़े फ्लैशकार्ड के माध्यम से सामाजिक कौशल सिखाता है। इसमें 12 सामाजिक परिदृश्य शामिल हैं: नमस्ते, हाथ मिलाना, धन्यवाद, मुस्कुराना, आँखों से संपर्क, मदद मांगना, गले लगाना, सुनना, माफी, अलविदा, साझा करना, और बारी का इंतज़ार करना।',
       icon: '👥',
-      impact: 'साथियों के साथ बातचीत में काफी सुधार करेगा, सामाजिक चिंता को कम करेगा, भावनात्मक बुद्धिमत्ता बढ़ाएगा, और बेहतर सामाजिक समझ के माध्यम से स्थायी दोस्ती बनाएगा।',
+      impact: 'साथियों के साथ बातचीत में सुधार करता है, सामाजिक चिंता को कम करता है, सामाजिक संकेतों की समझ बढ़ाता है, और बेहतर सामाजिक समझ के माध्यम से स्थायी दोस्ती बनाता है।',
     },
     {
       id: 'games',
       name: 'शैक्षिक खेल',
-      description: 'जल्द आ रहा है - खेल के माध्यम से सीखने को मजबूत करने वाले शैक्षिक खेलों का एक मजेदार संग्रह। खेलों में शामिल होंगे: प्रतीकों और शब्दों के साथ मेमोरी मैचिंग गेम, शब्दावली बनाने के लिए शब्द संबंध खेल, पैटर्न पहचान पहेलियां, विकल्पों के साथ इंटरैक्टिव कहानियां, प्रगति को ट्रैक करने वाली पुरस्कार-आधारित चुनौतियां। सभी खेल अन्य मॉड्यूल से सीखी गई अवधारणाओं को शामिल करते हैं।',
+      description: 'खेल के माध्यम संज्ञानात्मक कौशल बनाने वाले चार चिकित्सकीय खेलों का मज़ेदार संग्रह। मैच पेयर्स: आसान (4 कार्ड) और मध्यम (6 कार्ड) मोड के साथ मेमोरी गेम। इमोशन डिटेक्टिव: भावनाओं को पहचानना। काउंट और टैप: गिनती और गणना। पैटर्न पज़ल: तार्किक अनुक्रम।',
       icon: '🎮',
-      impact: 'प्रेरणा और जुड़ाव बनाए रखेगा, पुनरावृत्ति के माध्यम से सीखे गए कौशल को मजबूत करेगा, तनाव-मुक्त अभ्यास के अवसर प्रदान करेगा, और सीखने को काम के बजाय खेल जैसा महसूस कराएगा।',
+      impact: 'प्रेरणा और जुड़ाव बनाए रखता है, पुनरावृत्ति के माध्यम से सीखे गए कौशल को मजबूत करता है, तनाव-मुक्त अभ्यास के अवसर प्रदान करता है, और सीखने को काम के बजाय खेल जैसा महसूस कराता है।',
     },
     {
       id: 'dashboard',
@@ -321,7 +288,6 @@ const HELP_CONTENT_HI = {
     },
   ],
   sentenceBuilder: HELP_CONTENT_EN.sentenceBuilder,
-  feelingsFinder: HELP_CONTENT_EN.feelingsFinder,
   storyTime: HELP_CONTENT_EN.storyTime,
   dashboard: HELP_CONTENT_EN.dashboard,
 };
@@ -344,37 +310,41 @@ const HelpModal = ({ visible, onClose, context = 'hub', sections = null }) => {
   const styles = StyleSheet.create({
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      backgroundColor: 'rgba(15, 23, 42, 0.65)', // Darker, premium overlay
       justifyContent: 'center',
       alignItems: 'center',
     },
     modalContent: {
-      backgroundColor: currentTheme.colors.surface,
-      borderRadius: 16 * currentSpacing.scale,
-      padding: 24 * currentSpacing.scale,
+      backgroundColor: 'rgba(255, 255, 255, 0.96)', // Simulated frosted glass
+      borderRadius: 36 * currentSpacing.scale,
+      padding: 32 * currentSpacing.scale,
       width: '90%',
-      maxHeight: '80%',
+      maxHeight: '82%',
       borderWidth: 1,
-      borderColor: currentTheme.colors.border,
-      shadowColor: currentTheme.colors.text,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 12,
-      elevation: 8,
+      borderColor: 'rgba(255, 255, 255, 0.5)',
+      shadowColor: '#0F172A',
+      shadowOffset: { width: 0, height: 24 },
+      shadowOpacity: 0.2,
+      shadowRadius: 36,
+      elevation: 12,
     },
     modalHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 20 * currentSpacing.scale,
+      marginBottom: 24 * currentSpacing.scale,
+      paddingBottom: 16 * currentSpacing.scale,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(226, 232, 240, 0.6)',
     },
     modalTitle: {
-      fontSize: 22 * currentTextSize.scale,
-      fontWeight: 'bold',
-      color: currentTheme.colors.text,
+      fontSize: 24 * currentTextSize.scale,
+      fontWeight: '900',
+      color: '#1E293B',
+      letterSpacing: -0.5,
     },
     closeButton: {
-      backgroundColor: currentTheme.colors.primary,
+      backgroundColor: 'rgba(241, 245, 249, 0.8)',
       borderRadius: 20 * currentSpacing.scale,
       width: 40 * currentSpacing.scale,
       height: 40 * currentSpacing.scale,
@@ -382,53 +352,58 @@ const HelpModal = ({ visible, onClose, context = 'hub', sections = null }) => {
       alignItems: 'center',
     },
     closeIcon: {
-      fontSize: 20 * currentTextSize.scale,
-      color: currentTheme.colors.surface,
+      fontSize: 18 * currentTextSize.scale,
+      fontWeight: '800',
+      color: '#64748B',
     },
     helpItem: {
-      marginBottom: 20 * currentSpacing.scale,
-      paddingBottom: 20 * currentSpacing.scale,
-      borderBottomWidth: 1,
-      borderBottomColor: currentTheme.colors.border,
+      marginBottom: 28 * currentSpacing.scale,
     },
     helpItemTitle: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: 8 * currentSpacing.scale,
+      marginBottom: 12 * currentSpacing.scale,
     },
     helpIcon: {
-      fontSize: 24 * currentTextSize.scale,
-      marginRight: 8 * currentSpacing.scale,
+      fontSize: 26 * currentTextSize.scale,
+      marginRight: 12 * currentSpacing.scale,
     },
     helpTitleText: {
-      fontSize: 18 * currentTextSize.scale,
-      fontWeight: 'bold',
-      color: currentTheme.colors.text,
+      fontSize: 19 * currentTextSize.scale,
+      fontWeight: '800',
+      color: '#334155',
+      letterSpacing: -0.3,
+      flex: 1,
     },
     helpDescription: {
-      fontSize: 15 * currentTextSize.scale,
-      color: currentTheme.colors.textSecondary,
-      lineHeight: 22 * currentTextSize.scale,
-      marginLeft: 32 * currentSpacing.scale,
+      fontSize: 16 * currentTextSize.scale,
+      color: '#475569',
+      lineHeight: 24 * currentTextSize.scale,
+      fontWeight: '500',
+      marginLeft: 38 * currentSpacing.scale,
     },
     impactSection: {
-      marginTop: 12 * currentSpacing.scale,
-      padding: 12 * currentSpacing.scale,
-      backgroundColor: currentTheme.colors.background,
-      borderRadius: 8 * currentSpacing.scale,
-      borderLeftWidth: 3,
-      borderLeftColor: currentTheme.colors.primary,
+      marginTop: 16 * currentSpacing.scale,
+      padding: 18 * currentSpacing.scale,
+      backgroundColor: 'rgba(99, 102, 241, 0.08)',
+      borderRadius: 16 * currentSpacing.scale,
+      borderLeftWidth: 4,
+      borderLeftColor: '#6366F1',
+      marginLeft: 38 * currentSpacing.scale,
     },
     impactTitle: {
-      fontSize: 16 * currentTextSize.scale,
-      fontWeight: 'bold',
-      color: currentTheme.colors.primary,
+      fontSize: 15 * currentTextSize.scale,
+      fontWeight: '800',
+      color: '#4F46E5',
       marginBottom: 8 * currentSpacing.scale,
+      letterSpacing: 0.5,
+      textTransform: 'uppercase',
     },
     impactText: {
-      fontSize: 14 * currentTextSize.scale,
-      color: currentTheme.colors.textSecondary,
-      lineHeight: 20 * currentTextSize.scale,
+      fontSize: 15 * currentTextSize.scale,
+      color: '#334155',
+      lineHeight: 22 * currentTextSize.scale,
+      fontWeight: '500',
     },
   });
 
@@ -443,7 +418,7 @@ const HelpModal = ({ visible, onClose, context = 'hub', sections = null }) => {
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{t('helpAndInformation')}</Text>
-            <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+            <TouchableOpacity style={styles.closeButton} onPress={handleClose} activeOpacity={0.7}>
               <Text style={styles.closeIcon}>✕</Text>
             </TouchableOpacity>
           </View>

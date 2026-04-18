@@ -1,3 +1,17 @@
+/**
+ * SocialSkillsSuite — Social Skills Learning Cards
+ * ==================================================
+ * Focused single-view card UI teaching critical social cues
+ * with TTS voice support and animated transitions.
+ *
+ * Changes from original:
+ * - Imported shared theme tokens
+ * - Added accessibilityLabel/Role/Hint to all interactive elements
+ * - Added Android BackHandler support
+ * - Replaced 12-dot navigator with grouped dots + counter (UX improvement)
+ * - Decorative elements hidden from accessibility tree
+ */
+
 import React, { useState, useRef, useEffect } from 'react';
 import {
   SafeAreaView,
@@ -5,382 +19,345 @@ import {
   Text,
   View,
   TouchableOpacity,
-  ScrollView,
   Animated,
-  Image,
+  Dimensions,
+  BackHandler,
 } from 'react-native';
-import { useTheme } from '../contexts/ThemeContext';
-import { useLanguage } from '../contexts/LanguageContext';
+import Svg, { Defs, LinearGradient, Stop, Path } from 'react-native-svg';
 import { useTTS } from '../contexts/TTSContext';
 import { useUser } from '../contexts/UserContext';
-import HelpModal from '../screens/HelpModal';
-import {
-  BackArrowIcon,
-  HelpIcon,
-  SocialIcon,
-} from '../components/icons/ConditionIcons';
+import { BackArrowIcon } from '../components/icons/ConditionIcons';
+import { COLORS, SPACING, RADII, FONT_SIZES, FONT_WEIGHTS, SHADOWS } from '../theme';
 
-const SocialSkillsSuite = ({ onBack }) => {
-  const { currentTheme, currentTextSize, currentSpacing } = useTheme();
-  const { t } = useLanguage();
-  const { speak } = useTTS();
-  const { userData } = useUser();
-  const [currentScreen, setCurrentScreen] = useState('main');
-  const [showHelp, setShowHelp] = useState(false);
+const { width } = Dimensions.get('window');
 
-  const displayName = userData?.name || t('friend');
+// ── Social skills data ──
+const SOCIAL_CARDS = [
+  { emoji: '👋', title: 'Hello!', speech: 'We say Hello when we meet someone. Wave your hand and smile!', tip: 'Wave your hand and smile', color: '#6366F1' },
+  { emoji: '🤝', title: 'Shaking Hands', speech: 'We shake hands when we greet someone. Hold out your hand and gently shake.', tip: 'Hold out your hand gently', color: '#10B981' },
+  { emoji: '🙏', title: 'Thank You', speech: 'We say Thank You when someone does something nice for us. It makes them feel good!', tip: 'Say it when someone helps you', color: '#F59E0B' },
+  { emoji: '😊', title: 'Smiling', speech: 'A smile shows people you are friendly. Try smiling when you see someone!', tip: 'Smile to show you are friendly', color: '#EC4899' },
+  { emoji: '👀', title: 'Eye Contact', speech: 'Looking at someone when they talk shows you are listening. Try looking at their eyes or nose.', tip: 'Look at their eyes or nose', color: '#8B5CF6' },
+  { emoji: '🙋', title: 'Asking for Help', speech: 'When you need help, raise your hand or say Excuse me, can you help me please?', tip: 'Say: Can you help me please?', color: '#EF4444' },
+  { emoji: '🤗', title: 'Hugging', speech: 'We hug people we love, like mom and dad. Always ask first: Can I have a hug?', tip: 'Always ask before hugging', color: '#F97316' },
+  { emoji: '👂', title: 'Listening', speech: 'Good listening means being quiet when someone is talking and looking at them.', tip: 'Be quiet and look at them', color: '#06B6D4' },
+  { emoji: '🙇', title: 'Sorry', speech: 'We say Sorry when we make a mistake or hurt someone. It helps fix things.', tip: 'Say it when you make a mistake', color: '#64748B' },
+  { emoji: '👋🏼', title: 'Goodbye', speech: 'We say Goodbye when someone is leaving. Wave and say See you later!', tip: 'Wave and say: See you later!', color: '#7C3AED' },
+  { emoji: '🤲', title: 'Sharing', speech: 'Sharing means giving some of what you have to others. It makes everyone happy!', tip: 'Give some to a friend', color: '#059669' },
+  { emoji: '⏳', title: 'Waiting Your Turn', speech: 'Sometimes we have to wait. Stand calmly and wait for your turn. You will get a chance!', tip: 'Stand calmly and be patient', color: '#D97706' },
+];
 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-  const scaleAnim = useRef(new Animated.Value(0.9)).current;
-
+// ── Decorative floating orb (hidden from a11y) ──
+const FloatingOrb = ({ size, color, top, left, delay = 0 }) => {
+  const floatAnim = useRef(new Animated.Value(0)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    Animated.timing(opacityAnim, { toValue: 1, duration: 1000, delay, useNativeDriver: true }).start();
+    Animated.loop(Animated.sequence([
+      Animated.timing(floatAnim, { toValue: 1, duration: 3000 + delay, useNativeDriver: true }),
+      Animated.timing(floatAnim, { toValue: 0, duration: 3000 + delay, useNativeDriver: true }),
+    ])).start();
   }, []);
-
-  const handleActivityPress = (activityId, title) => {
-    speak(title);
-    setCurrentScreen(activityId);
-  };
-
-  const handleBackToMain = () => {
-    speak('Going back to Social Skills menu');
-    setCurrentScreen('main');
-  };
-
-  const handleHelpPress = () => {
-    speak(t('openingHelpForSuite'));
-    setShowHelp(true);
-  };
-
-  const handleCloseHelp = () => {
-    setShowHelp(false);
-  };
-
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: currentTheme.colors.background,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: currentTheme.colors.surface,
-      padding: 16 * currentSpacing.scale,
-      borderBottomWidth: 1,
-      borderBottomColor: currentTheme.colors.border,
-    },
-    backButton: {
-      backgroundColor: currentTheme.colors.primary,
-      borderRadius: 25 * currentSpacing.scale,
-      width: 50 * currentSpacing.scale,
-      height: 50 * currentSpacing.scale,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginRight: 16 * currentSpacing.scale,
-    },
-    backIcon: {
-      fontSize: 24 * currentTextSize.scale,
-      color: currentTheme.colors.surface,
-    },
-    headerTitle: {
-      fontSize: 24 * currentTextSize.scale,
-      fontWeight: 'bold',
-      color: currentTheme.colors.text,
-      flex: 1,
-    },
-    subtitle: {
-      fontSize: 16 * currentTextSize.scale,
-      color: currentTheme.colors.textSecondary,
-      textAlign: 'center',
-      marginTop: 8 * currentSpacing.scale,
-    },
-    content: {
-      flex: 1,
-      padding: 20 * currentSpacing.scale,
-    },
-    activityCard: {
-      backgroundColor: currentTheme.colors.surface,
-      borderRadius: 24 * currentSpacing.scale,
-      padding: 24 * currentSpacing.scale,
-      marginBottom: 20 * currentSpacing.scale,
-      borderWidth: 1,
-      borderColor: currentTheme.colors.border || 'rgba(0,0,0,0.05)',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.1,
-      shadowRadius: 16,
-      elevation: 8,
-    },
-    activityImage: {
-      width: 80 * currentSpacing.scale,
-      height: 80 * currentSpacing.scale,
-      borderRadius: 16 * currentSpacing.scale,
-      marginBottom: 12 * currentSpacing.scale,
-      alignSelf: 'center',
-      resizeMode: 'contain',
-    },
-    activityTitle: {
-      fontSize: 22 * currentTextSize.scale,
-      fontWeight: '700',
-      color: currentTheme.colors.text,
-      marginBottom: 8 * currentSpacing.scale,
-    },
-    activityDescription: {
-      fontSize: 16 * currentTextSize.scale,
-      color: currentTheme.colors.textSecondary,
-      lineHeight: 22 * currentTextSize.scale,
-    },
-    helpButton: {
-      position: 'absolute',
-      bottom: 30 * currentSpacing.scale,
-      right: 30 * currentSpacing.scale,
-      backgroundColor: currentTheme.colors.secondary,
-      borderRadius: 32 * currentSpacing.scale,
-      width: 68 * currentSpacing.scale,
-      height: 68 * currentSpacing.scale,
-      justifyContent: 'center',
-      alignItems: 'center',
-      shadowColor: currentTheme.colors.secondary,
-      shadowOffset: { width: 0, height: 10 },
-      shadowOpacity: 0.5,
-      shadowRadius: 16,
-      elevation: 12,
-    },
-    helpIcon: {
-      fontSize: 28 * currentTextSize.scale,
-      color: currentTheme.colors.surface,
-    },
-    simpleHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: 16 * currentSpacing.scale,
-      borderBottomWidth: 1,
-      borderBottomColor: currentTheme.colors.border,
-      backgroundColor: currentTheme.colors.surface,
-    },
-    simpleTitle: {
-      fontSize: 20 * currentTextSize.scale,
-      fontWeight: '600',
-      color: currentTheme.colors.text,
-      marginLeft: 12 * currentSpacing.scale,
-    },
-    cardGrid: {
-      padding: 20 * currentSpacing.scale,
-    },
-    smallCard: {
-      backgroundColor: currentTheme.colors.surface,
-      borderRadius: 20 * currentSpacing.scale,
-      padding: 16 * currentSpacing.scale,
-      marginBottom: 12 * currentSpacing.scale,
-      borderWidth: 1,
-      borderColor: currentTheme.colors.border,
-    },
-    smallImage: {
-      width: 60 * currentSpacing.scale,
-      height: 60 * currentSpacing.scale,
-      borderRadius: 12 * currentSpacing.scale,
-      marginBottom: 8 * currentSpacing.scale,
-      alignSelf: 'center',
-      resizeMode: 'contain',
-    },
-    smallTitle: {
-      fontSize: 18 * currentTextSize.scale,
-      fontWeight: '600',
-      color: currentTheme.colors.text,
-      marginBottom: 6 * currentSpacing.scale,
-    },
-    smallText: {
-      fontSize: 16 * currentTextSize.scale,
-      color: currentTheme.colors.textSecondary,
-    },
-  });
-
-  const activities = [
-    {
-      id: 'greetings',
-      title: 'Saying Hello',
-      description: 'Practice hello, goodbye, and meeting new people.',
-      image: { uri: 'https://img.icons8.com/color/96/hello.png' },
-    },
-    {
-      id: 'feelings',
-      title: 'Big Feelings',
-      description: 'Learn words like happy, sad, angry, and scared.',
-      image: { uri: 'https://img.icons8.com/color/96/happy.png' },
-    },
-    {
-      id: 'asking-help',
-      title: 'Asking for Help',
-      description: 'Practice asking for help in a kind way.',
-      image: { uri: 'https://img.icons8.com/color/96/help.png' },
-    },
-    {
-      id: 'personal-space',
-      title: 'Personal Space',
-      description: 'Learn about safe and comfy distance with others.',
-      image: { uri: 'https://img.icons8.com/color/96/social-distancing.png' },
-    },
-  ];
-
-  const greetingCards = [
-    { title: 'Hello', image: { uri: 'https://img.icons8.com/color/96/hello.png' }, sentence: `Hello, I am ${displayName}.` },
-    { title: 'Goodbye', image: { uri: 'https://img.icons8.com/color/96/goodbye.png' }, sentence: 'Goodbye, see you.' },
-    { title: 'Nice to meet you', image: { uri: 'https://img.icons8.com/color/96/handshake.png' }, sentence: `Nice to meet you, I am ${displayName}.` },
-  ];
-
-  const feelingCards = [
-    { title: 'Happy', image: { uri: 'https://img.icons8.com/color/96/happy.png' }, sentence: 'I feel happy.' },
-    { title: 'Sad', image: { uri: 'https://img.icons8.com/color/96/sad.png' }, sentence: 'I feel sad.' },
-    { title: 'Angry', image: { uri: 'https://img.icons8.com/color/96/angry.png' }, sentence: 'I feel angry.' },
-    { title: 'Scared', image: { uri: 'https://img.icons8.com/color/96/scared.png' }, sentence: 'I feel scared.' },
-  ];
-
-  const helpCards = [
-    { title: 'Need help', image: { uri: 'https://img.icons8.com/color/96/help.png' }, sentence: `I am ${displayName}. Help please.` },
-    { title: 'Don\'t understand', image: { uri: 'https://img.icons8.com/color/96/confused.png' }, sentence: `I am ${displayName}. I don't understand.` },
-    { title: 'Break', image: { uri: 'https://img.icons8.com/color/96/pause.png' }, sentence: `I am ${displayName}. I need a break.` },
-  ];
-
-  const spaceCards = [
-    { title: 'Too close', image: { uri: 'https://img.icons8.com/color/96/social-distancing.png' }, sentence: 'Too close. Please give me space.' },
-    { title: 'Ask to hug', image: { uri: 'https://img.icons8.com/color/96/hug.png' }, sentence: 'Can I have a hug?' },
-    { title: 'High five', image: { uri: 'https://img.icons8.com/color/96/high-five.png' }, sentence: 'High five instead?' },
-  ];
-
-  const renderSimpleCards = (title, cards) => (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.simpleHeader}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={handleBackToMain}
-          activeOpacity={0.7}
-        >
-          <BackArrowIcon
-            size={24 * currentTextSize.scale}
-            color={currentTheme.colors.surface}
-          />
-        </TouchableOpacity>
-        <Text style={styles.simpleTitle}>{title}</Text>
-      </View>
-      <ScrollView style={styles.cardGrid} showsVerticalScrollIndicator={false}>
-        {cards.map(card => (
-          <TouchableOpacity
-            key={card.title}
-            style={styles.smallCard}
-            activeOpacity={0.85}
-            onPress={() => speak(card.sentence)}
-          >
-            {card.image && (
-              <Image source={card.image} style={styles.smallImage} />
-            )}
-            <Text style={styles.smallTitle}>{card.title}</Text>
-            <Text style={styles.smallText}>{card.sentence}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-    </SafeAreaView>
-  );
-
-  if (currentScreen === 'greetings') {
-    return renderSimpleCards('Saying Hello', greetingCards);
-  }
-
-  if (currentScreen === 'feelings') {
-    return renderSimpleCards('Big Feelings', feelingCards);
-  }
-
-  if (currentScreen === 'asking-help') {
-    return renderSimpleCards('Asking for Help', helpCards);
-  }
-
-  if (currentScreen === 'personal-space') {
-    return renderSimpleCards('Personal Space', spaceCards);
-  }
-
+  const translateY = floatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -12] });
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        {onBack && (
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={onBack}
-            activeOpacity={0.7}
-          >
-            <BackArrowIcon
-              size={24 * currentTextSize.scale}
-              color={currentTheme.colors.surface}
-            />
-          </TouchableOpacity>
-        )}
-        <Text style={styles.headerTitle}>Social Skills</Text>
-      </View>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.subtitle}>
-          Gentle, simple practice for everyday social situations.
-        </Text>
-
-        {activities.map(activity => (
-          <Animated.View
-            key={activity.id}
-            style={{
-              opacity: fadeAnim,
-              transform: [
-                { translateY: slideAnim },
-                { scale: scaleAnim },
-              ],
-            }}
-          >
-            <TouchableOpacity
-              style={styles.activityCard}
-              activeOpacity={0.85}
-              onPress={() => handleActivityPress(activity.id, activity.title)}
-            >
-              {activity.image && (
-                <Image source={activity.image} style={styles.activityImage} />
-              )}
-              <Text style={styles.activityTitle}>{activity.title}</Text>
-              <Text style={styles.activityDescription}>
-                {activity.description}
-              </Text>
-            </TouchableOpacity>
-          </Animated.View>
-        ))}
-      </ScrollView>
-
-      <TouchableOpacity
-        style={styles.helpButton}
-        onPress={handleHelpPress}
-        activeOpacity={0.8}
-      >
-        <HelpIcon size={36 * currentTextSize.scale} color="#FFFFFF" />
-      </TouchableOpacity>
-
-      <HelpModal
-        visible={showHelp}
-        onClose={handleCloseHelp}
-        context="social-skills"
-      />
-    </SafeAreaView>
+    <Animated.View
+      style={{ position: 'absolute', top, left, width: size, height: size, borderRadius: size / 2, backgroundColor: color, opacity: opacityAnim, transform: [{ translateY }] }}
+      importantForAccessibility="no-hide-descendants"
+      accessibilityElementsHidden={true}
+    />
   );
 };
+
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+
+// ── Scale-on-press card wrapper ──
+const TouchCard = ({ children, onPress, style, accessibilityLabel, accessibilityHint }) => {
+  const scale = useRef(new Animated.Value(1)).current;
+  return (
+    <AnimatedTouchable
+      style={[style, { transform: [{ scale }] }]}
+      activeOpacity={0.9}
+      onPressIn={() => Animated.spring(scale, { toValue: 0.95, useNativeDriver: true }).start()}
+      onPressOut={() => Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start()}
+      onPress={onPress}
+      disabled={!onPress}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole="button"
+      accessibilityHint={accessibilityHint}
+    >
+      {children}
+    </AnimatedTouchable>
+  );
+};
+
+// ──────────────────────────────────────────────
+// MAIN COMPONENT
+// ──────────────────────────────────────────────
+const SocialSkillsSuite = ({ onBack }) => {
+  const { speak } = useTTS();
+  const { logActivity } = useUser();
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const cardScale = useRef(new Animated.Value(0.85)).current;
+  const cardOpacity = useRef(new Animated.Value(0)).current;
+  const headerFade = useRef(new Animated.Value(0)).current;
+
+  const card = SOCIAL_CARDS[currentIndex];
+
+  useEffect(() => {
+    Animated.timing(headerFade, { toValue: 1, duration: 600, useNativeDriver: true }).start();
+    animateCard();
+  }, []);
+
+  // ── Android hardware back support ──
+  useEffect(() => {
+    const onHardwareBack = () => { onBack(); return true; };
+    BackHandler.addEventListener('hardwareBackPress', onHardwareBack);
+    return () => BackHandler.removeEventListener('hardwareBackPress', onHardwareBack);
+  }, [onBack]);
+
+  const animateCard = () => {
+    cardScale.setValue(0.85);
+    cardOpacity.setValue(0);
+    Animated.parallel([
+      Animated.spring(cardScale, { toValue: 1, tension: 50, friction: 7, useNativeDriver: true }),
+      Animated.timing(cardOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+    ]).start();
+  };
+
+  const handleNext = () => {
+    const nextIdx = currentIndex < SOCIAL_CARDS.length - 1 ? currentIndex + 1 : 0;
+    Animated.parallel([
+      Animated.timing(cardScale, { toValue: 0.85, duration: 200, useNativeDriver: true }),
+      Animated.timing(cardOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start(() => {
+      setCurrentIndex(nextIdx);
+      logActivity('Social Skills', 1);
+      animateCard();
+    });
+  };
+
+  const handlePrev = () => {
+    const prevIdx = currentIndex > 0 ? currentIndex - 1 : SOCIAL_CARDS.length - 1;
+    Animated.parallel([
+      Animated.timing(cardScale, { toValue: 0.85, duration: 200, useNativeDriver: true }),
+      Animated.timing(cardOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start(() => {
+      setCurrentIndex(prevIdx);
+      animateCard();
+    });
+  };
+
+  const handleSpeak = () => {
+    speak(`${card.title}. ${card.speech}`);
+  };
+
+  const progress = ((currentIndex + 1) / SOCIAL_CARDS.length) * 100;
+
+  // Show max 7 dots centered around current position (better for 12 items)
+  const MAX_VISIBLE_DOTS = 7;
+  const halfDots = Math.floor(MAX_VISIBLE_DOTS / 2);
+  let dotStart = Math.max(0, currentIndex - halfDots);
+  let dotEnd = Math.min(SOCIAL_CARDS.length, dotStart + MAX_VISIBLE_DOTS);
+  if (dotEnd - dotStart < MAX_VISIBLE_DOTS) {
+    dotStart = Math.max(0, dotEnd - MAX_VISIBLE_DOTS);
+  }
+  const visibleDots = SOCIAL_CARDS.slice(dotStart, dotEnd);
+
+  return (
+    <View style={styles.container}>
+      {/* ── Background ── */}
+      <View style={styles.waveContainer}>
+        <Svg height={520} width="100%" preserveAspectRatio="none" viewBox="0 0 1440 320">
+          <Defs>
+            <LinearGradient id="ssGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <Stop offset="0%" stopColor={COLORS.primaryDeep} />
+              <Stop offset="40%" stopColor={card.color + 'CC'} />
+              <Stop offset="100%" stopColor={card.color} />
+            </LinearGradient>
+          </Defs>
+          <Path fill="url(#ssGrad)" d="M0,294L48,272.7C96,251,192,209,288,208.7C384,209,480,251,576,262C672,273,768,251,864,224.7C960,198,1056,166,1152,160.7C1248,155,1344,177,1392,187.3L1440,198L1440,0L1392,0C1344,0,1248,0,1152,0C1056,0,960,0,864,0C768,0,672,0,576,0C480,0,384,0,288,0C192,0,96,0,48,0L0,0Z" />
+        </Svg>
+      </View>
+
+      <FloatingOrb size={70} color={card.color + '18'} top={60} left={width - 90} delay={0} />
+      <FloatingOrb size={45} color={card.color + '20'} top={120} left={20} delay={300} />
+
+      <SafeAreaView style={styles.safeArea}>
+        {/* ── Header ── */}
+        <Animated.View style={[styles.headerTop, { opacity: headerFade }]}>
+          <TouchCard
+            style={styles.backButton}
+            onPress={onBack}
+            accessibilityLabel="Go back"
+            accessibilityHint="Returns to Learning Center"
+          >
+            <BackArrowIcon size={22} color={card.color} />
+          </TouchCard>
+          <View style={styles.headerTitles}>
+            <Text style={styles.title} accessibilityRole="header">Social Skills</Text>
+            <Text style={styles.subtitleText}>{currentIndex + 1} of {SOCIAL_CARDS.length}</Text>
+          </View>
+        </Animated.View>
+
+        {/* ── Progress bar ── */}
+        <View style={styles.progressOuter} accessibilityLabel={`Progress: ${currentIndex + 1} of ${SOCIAL_CARDS.length} cards`}>
+          <View style={[styles.progressInner, { width: `${progress}%`, backgroundColor: card.color }]} />
+        </View>
+
+        {/* ── Main Card ── */}
+        <View style={styles.cardArea}>
+          <Animated.View
+            style={[styles.bigCard, { opacity: cardOpacity, transform: [{ scale: cardScale }], shadowColor: card.color }]}
+            accessible={true}
+            accessibilityLabel={`${card.title}. ${card.tip}`}
+          >
+            <View style={[styles.emojiCircle, { backgroundColor: card.color + '12' }]}>
+              <Text style={styles.bigEmoji}>{card.emoji}</Text>
+            </View>
+            <Text style={styles.cardTitle}>{card.title}</Text>
+            <View style={[styles.tipBadge, { backgroundColor: card.color + '12' }]}>
+              <Text style={[styles.tipText, { color: card.color }]}>{card.tip}</Text>
+            </View>
+            <TouchCard
+              style={[styles.voiceButton, { backgroundColor: card.color }]}
+              onPress={handleSpeak}
+              accessibilityLabel={`Hear about ${card.title}`}
+              accessibilityHint="Reads the social skill description aloud"
+            >
+              <Text style={styles.voiceButtonText}>🔊  Hear It</Text>
+            </TouchCard>
+          </Animated.View>
+        </View>
+
+        {/* ── Navigation ── */}
+        <View style={styles.navRow}>
+          <TouchCard
+            style={styles.navBtn}
+            onPress={handlePrev}
+            accessibilityLabel="Previous card"
+            accessibilityHint="Go to the previous social skill"
+          >
+            <Text style={styles.navBtnText}>← Back</Text>
+          </TouchCard>
+
+          {/* Grouped dot indicators (max 7 visible) */}
+          <View style={styles.dots} accessibilityLabel={`Card ${currentIndex + 1} of ${SOCIAL_CARDS.length}`}>
+            {dotStart > 0 && <View style={styles.dotEllipsis}><Text style={styles.dotEllipsisText}>…</Text></View>}
+            {visibleDots.map((_, i) => {
+              const actualIndex = dotStart + i;
+              return (
+                <View key={actualIndex} style={[
+                  styles.dot,
+                  actualIndex === currentIndex && { backgroundColor: card.color, width: 20 },
+                ]} />
+              );
+            })}
+            {dotEnd < SOCIAL_CARDS.length && <View style={styles.dotEllipsis}><Text style={styles.dotEllipsisText}>…</Text></View>}
+          </View>
+
+          <TouchCard
+            style={[styles.navBtn, styles.nextBtn, { backgroundColor: card.color }]}
+            onPress={handleNext}
+            accessibilityLabel={currentIndex < SOCIAL_CARDS.length - 1 ? 'Next card' : 'Start over'}
+            accessibilityHint={currentIndex < SOCIAL_CARDS.length - 1 ? 'Go to the next social skill' : 'Restart from the first card'}
+          >
+            <Text style={[styles.navBtnText, { color: COLORS.textOnDark }]}>
+              {currentIndex < SOCIAL_CARDS.length - 1 ? 'Next →' : 'Start Over ↻'}
+            </Text>
+          </TouchCard>
+        </View>
+      </SafeAreaView>
+    </View>
+  );
+};
+
+// ──────────────────────────────────────────────
+// STYLES
+// ──────────────────────────────────────────────
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: COLORS.background },
+  safeArea: { flex: 1 },
+  waveContainer: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 0 },
+
+  // Header
+  headerTop: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: SPACING.xl, marginTop: SPACING.base, zIndex: 10,
+  },
+  backButton: {
+    backgroundColor: COLORS.overlayWhite95, borderRadius: RADII.lg,
+    width: 44, height: 44, justifyContent: 'center', alignItems: 'center',
+    ...SHADOWS.lg, shadowColor: COLORS.primaryDeep, shadowOpacity: 0.15,
+  },
+  headerTitles: { flex: 1, alignItems: 'center', marginRight: 44 },
+  title: {
+    fontSize: FONT_SIZES.largeTitle, fontWeight: FONT_WEIGHTS.black,
+    color: COLORS.textOnDark, letterSpacing: 0.3,
+    textShadowColor: 'rgba(0,0,0,0.25)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 8,
+  },
+  subtitleText: {
+    fontSize: FONT_SIZES.footnote, color: 'rgba(255,255,255,0.85)',
+    fontWeight: FONT_WEIGHTS.semibold, marginTop: 3, letterSpacing: 0.8, textTransform: 'uppercase',
+  },
+
+  // Progress
+  progressOuter: {
+    height: 5, backgroundColor: 'rgba(255,255,255,0.2)',
+    marginHorizontal: SPACING.xl, marginTop: SPACING.body, borderRadius: 3, overflow: 'hidden',
+  },
+  progressInner: { height: '100%', borderRadius: 3 },
+
+  // Card area
+  cardArea: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: SPACING.xl },
+  bigCard: {
+    backgroundColor: COLORS.surface, borderRadius: RADII.xxl + 8, padding: SPACING.xxl + 4,
+    alignItems: 'center', width: '100%',
+    shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.15, shadowRadius: 30, elevation: 16,
+  },
+  emojiCircle: {
+    width: 140, height: 140, borderRadius: 70,
+    justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.lg,
+  },
+  bigEmoji: { fontSize: 80 },
+  cardTitle: {
+    fontSize: FONT_SIZES.superDisplay - 4, fontWeight: FONT_WEIGHTS.black,
+    color: COLORS.textPrimary, letterSpacing: -0.5, marginBottom: SPACING.body, textAlign: 'center',
+  },
+  tipBadge: {
+    borderRadius: RADII.md, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm + 2, marginBottom: SPACING.xl,
+  },
+  tipText: { fontSize: FONT_SIZES.callout, fontWeight: FONT_WEIGHTS.bold, textAlign: 'center' },
+  voiceButton: {
+    borderRadius: RADII.xl - 2, paddingHorizontal: SPACING.xxxl,
+    paddingVertical: SPACING.base,
+    shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 14, elevation: 8,
+  },
+  voiceButtonText: { color: COLORS.textOnDark, fontSize: FONT_SIZES.title3 + 1, fontWeight: FONT_WEIGHTS.extrabold },
+
+  // Navigation
+  navRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: SPACING.xl, paddingBottom: 30, paddingTop: SPACING.base,
+  },
+  navBtn: {
+    backgroundColor: COLORS.surface, borderRadius: RADII.lg - 2,
+    paddingHorizontal: SPACING.xl - 2, paddingVertical: SPACING.body,
+    ...SHADOWS.sm,
+  },
+  nextBtn: {
+    ...SHADOWS.md, shadowOpacity: 0.2,
+  },
+  navBtnText: { fontSize: FONT_SIZES.callout, fontWeight: FONT_WEIGHTS.extrabold, color: '#334155' },
+
+  // Dots (grouped)
+  dots: { flexDirection: 'row', alignItems: 'center' },
+  dot: {
+    width: 8, height: 8, borderRadius: 4,
+    backgroundColor: '#CBD5E1', marginHorizontal: 3,
+  },
+  dotEllipsis: { marginHorizontal: 2 },
+  dotEllipsisText: { fontSize: FONT_SIZES.footnote, color: '#CBD5E1', fontWeight: FONT_WEIGHTS.bold },
+});
 
 export default SocialSkillsSuite;
